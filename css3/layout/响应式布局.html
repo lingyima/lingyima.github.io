@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>响应式布局</title>
+	<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+	<style>
+		body,ul{
+			margin: 0;
+			padding: 0;
+		}
+		ul {
+			list-style: none;
+		}
+		.container {
+			border: 1px solid #000;
+			overflow: hidden;
+		}
+		.container li {
+			width: 23%;
+			height: 200px;
+			line-height: 200px;
+			text-align:center;
+			background-color: gold;
+			float: left;
+			margin: 30px 1%;
+		}
+		
+		@media (max-width: 1024px) {
+			.container li {
+				width: 46%;
+				margin: 30px 2%;
+			}
+		}
+		
+		@media (max-width: 768px) {
+			.container li {
+				width: 90%;
+				margin: 30px 5%;
+			}
+		}
+
+
+
+	</style>
+</head>
+<body>
+	<ul class="container">
+		<li><a href="">首页</a></li>
+		<li><a href="">茶品</a></li>
+		<li><a href="">留言</a></li>
+		<li><a href="">联系</a></li>
+	</ul>
+</body>
+</html>

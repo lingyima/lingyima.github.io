@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Document</title>
+	<style>
+		.box {
+			width:100px;
+			height: 100px;
+			background-color: red;
+			animation: moving 1s ease 0ms 6 alternate both;
+			/*animation-play-state: paused;*/
+		}
+		.box:hover {
+			/*animation-play-state: running;*/
+		}
+
+		@keyframes moving {
+			from {
+				width: 200px;
+				background-color: blue;
+			}
+			to {
+				width: 500px;
+			}
+		}
+	</style>
+
+</head>
+<body>
+<h1>CSS3 animation动画</h1>
+<ol>
+	<li>@keyframes 定义关键帧动画</li>
+	<li>animation-name 动画名称</li>
+	<li>animation-duration 动画时间</li>
+	<li>animation-timing-function 动画曲线
+    	<ul>
+		    <li>linear 匀速</li>
+		    <li>ease 开始和结束慢速</li>
+		    <li>ease-in 开始是慢速</li>
+		    <li>ease-out 结束时慢速</li>
+		    <li>ease-in-out 开始和结束时慢速</li>
+		    <li>steps 动画步数</li>
+    	</ul>
+    </li>
+
+	<li>animation-delay 动画延迟
+	<li>animation-iteration-count 动画播放次数 n|infinite
+	<li>animation-direction
+		<ul>
+		    <li>normal 默认动画结束不返回</li>
+		    <li>Alternate 动画结束后返回</li>
+	    </ul>
+	</li>
+
+	<li>animation-play-state 动画状态</li>
+		<ul>
+		    <li>paused 停止</li>
+		    <li>running 运动</li>
+		</ul>
+	<li>animation-fill-mode 动画前后的状态</li>
+		<ul>
+			<li>none 不改变默认行为</li>
+			<li>forwards 当动画完成后，保持最后一个属性值（在最后一个关键帧中定义）</li>
+			<li>backwards 在 animation-delay 所指定的一段时间内，在动画显示之前，应用开始属性值（在第一个关键帧中定义）</li>
+			<li>both 向前和向后填充模式都被应用</li>
+		</ul>
+	<li>animation:name duration timing-function delay iteration-count direction;同时设置多个属性 </li>
+</ul>
+
+<div class="box"></div>
+</body>
+</html>

@@ -1,0 +1,283 @@
+body {
+	color: #3d3d3d;
+	font-family： 'Microsot YaHei';
+}
+
+a:link {
+	text-decoration: none;
+}
+/** 主体布局 ****************/
+.container {
+	position: absolute;
+	left: 0;
+	right: 0;
+	top: 0;
+	bottom:0;
+	background-color: gold;
+}
+.header {
+	height: 2.5rem;
+	background-color: #37ab40;
+	position: relative;
+}
+.content {
+	position: absolute;
+	left: 0;
+	right: 0;
+	top: 2.5rem;
+	bottom: 2.5rem;
+	background-color: #f6f3f3;
+	overflow-x: hidden;
+	overflow-y: auto;
+}
+
+.main_navigation {
+	position: absolute;
+	height: 2.5rem;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background-color: #fff;	
+	overflow: hidden;
+}
+
+/** header 样式 ****************/
+.header h1 {
+	text-align: center;
+}
+.header h1 a {
+	color: #fff;
+	font-size: 1.0rem;
+	line-height: 2.5rem;
+}
+
+.header .search a {
+	position: absolute;
+	display: block;
+	width: 1.15rem;
+	height: 1.15rem;
+	top: 0.675rem;
+	right: 0.75rem;
+	background: url(../../images/css-sprite.png) left top no-repeat;
+	background-size: 3.0rem 54.5rem;
+	text-indent: -9900px;
+}
+
+/** banner 样式 ****************/
+.banner img {
+	width: 100%;
+}
+
+/** 菜单 ****************/
+.category_navigation {
+	margin-top: 0.5rem;
+	padding: 0 0.5rem 0.75rem;
+	background-color: #fff;
+	overflow: hidden;
+}
+.category_navigation ul {
+	overflow: hidden;
+
+}
+.category_navigation li {
+	float: left;
+	width: 2.75rem;
+	height: 4.75rem;
+	margin-left: 0.8435rem; /*0.8435rem*/
+	margin-right: 0.8435rem;
+	margin-top: 0.75rem;
+	text-align: center;
+}
+.category_navigation a {
+	display: block;
+	width: 2.75rem;
+	height: 2.75rem;
+	margin: 0 auto;
+	text-indent: -9000px;
+	background: url(../../images/css-sprite.png) no-repeat;
+	background-size: 3.0rem 54.5rem;
+}
+.category_navigation h2 {
+	margin-top:0.5rem;
+	height: 0.75rem;
+	line-height: 0.75rem;
+	font: 0.65rem 'Microsoft Yahei';
+}
+
+.category_navigation li:nth-child(1) a {
+	background-position: -0.025rem -3.025rem; /*121px*/
+}
+.category_navigation li:nth-child(2) a {
+	background-position: -0.025rem -6.025rem; /*241*/
+}
+.category_navigation li:nth-child(3) a {
+	background-position: -0.025rem -9.025rem /*363*/
+}
+.category_navigation li:nth-child(4) a {
+	background-position: -0.025rem -12.025rem;
+}
+.category_navigation li:nth-child(5) a {
+	background-position: -0.025rem -15.025rem;
+}
+.category_navigation li:nth-child(6) a {
+	background-position: -0.025rem -18.025rem;
+}
+.category_navigation li:nth-child(7) a {
+	background-position: -0.025rem -21.025rem;
+}
+.category_navigation li:nth-child(8) a {
+	background-position: -0.025rem -24.025rem;
+}
+
+
+/** 水果列表样式 ****************/
+.fruit-banner {
+	padding-left:0.5rem;
+	padding-right:0.5rem;
+}
+.fruit-wrapper {
+	margin-top:0.5rem;
+	background-color:#fff;
+	margin-bottom: 0.5rem;
+
+}
+.fruit-header {
+	height: 2.25rem;
+	margin-left:0.5rem;
+	margin-right:0.5rem;	
+	position:relative;
+}
+.fruit-header h2 {
+	position: absolute;
+	top: 0.675rem;
+	left: 0;
+	height: 0.9rem;
+	line-height: 0.9rem;
+	border-left: 0.3rem solid #fcd462; /*12px*/
+	color: #fcd462;
+	padding-left: 0.5rem;
+}
+.fruit-header .fruid-more {
+	position: absolute;
+	right: 0;
+	top: 0.75rem;
+	font-size: 0.7rem;
+	color: #777;
+}
+.fruit-banner img {
+	width: 100%;
+}
+
+.fruit-list {
+	margin-top: 1.0rem;
+	padding-left: 0.5rem;
+	padding-right: 0.5rem;
+	padding-bottom: 0.75rem;
+	overflow: hidden;
+
+}
+.fruit-list li {
+	width: 5.85rem;
+	float: left;
+	width:33.3333333%;
+	border-left:0.1rem solid #f6f3f3;
+	box-sizing: border-box;
+}
+.fruit-list li:nth-child(1) {
+	border-left: 0;
+}
+.fruit-list figure,
+.fruit-list aside {
+	margin-right: 0.5rem;
+	margin-left: 0.5rem;
+}
+.fruit-list figure {
+	height: 5.2rem;
+	position: relative;
+}
+.fruit-list figcaption {
+	margin-top:0.5rem;
+	font-size: 0.7rem;
+	line-height: 0.7rem;
+	width: 4.85rem;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+	overflow: hidden;
+
+}
+.fruit-list img {
+	width: 4.85rem;
+}
+
+.fruit-list aside {
+	position: relative;
+	height: 2.25rem;
+}
+.fruit-list .product-info {
+	display: block;
+	font-size: 0.7rem;
+	margin-top: 0.5rem;
+	color: #b6b6b6;
+}
+.fruit-list .fruit-price {
+	color: #ff501d;
+	font-weight: bold;
+}
+.fruit-list .product-order {
+	position: absolute;
+	right: 0;
+	bottom: 0;
+	display: block;
+	text-indent: -9000px;
+	background: url(../../images/css-sprite.png) no-repeat;
+	background-size: 3.0rem 54.5rem;
+	background-position: -0.025rem -39.0rem;
+	width: 1.5rem;
+	height: 1.5rem;
+}
+
+
+/**** main_navigation*****/
+.main_navigation li {
+	margin-top: 0.25rem;
+	margin-bottom: 0.25rem;
+	float: left;
+	width: 25%;
+	height: 2.0rem;
+	overflow: hidden;
+	text-align: center;
+}
+.main_navigation span {
+	margin: 0 auto;
+	background: url(../../images/css-sprite.png) no-repeat;
+	background-size: 3.0rem 54.5rem;
+	height: 1.1rem;
+	display: block;
+}
+.main_navigation a {
+	display: block;
+	font-size: 0.65rem;
+	color: #777;
+	height: 100%;
+
+}
+.main_navigation strong {
+	display: block;
+	margin-top: 0.25rem;
+}
+.main_navigation .main_nav_home span {
+	width: 1.2rem;
+	background-position: -0.025rem -27.0rem;
+}
+.main_navigation .main_nav_cate span {
+	width: 1.15rem;
+	background-position: -0.025rem -30.025rem;
+}
+.main_navigation .main_nav_cart span {
+	width: 1.25rem;
+	background-position: -0.025rem -33.025rem;
+}
+.main_navigation .main_nav_my span {
+	width: 0.975rem;
+	background-position: -0.025rem -36.025rem;
+}

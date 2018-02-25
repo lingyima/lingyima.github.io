@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8" />
+	<title>Transform 变形动画</title>
+</head>
+<body>
+	<h1>Transform 变形动画示例</h2>
+	<ul>
+		<li>translate(x, y) 盒子位移</li>
+		<li>scale(x, y) 盒子缩放</li>
+		<li>rotate(deg) 盒子旋转</li>
+		<li>skew(x-angle, y-angle) 盒子斜切</li>
+		<li>perspective 透视距离</li>
+		<li>transform-style flat | preserve-3d 盒子是否按3d空间显示</li>
+		<li>translateX、translateY、translateZ 三维移动</li>
+		<li>scaleX、scaleY、scaleZ 三维缩放</li>
+		<li>transform-origin 变形的中心点</li>
+		<li>backface-visibility 盒子背面是否可见</li>
+	</ul>
+
+<div id="wrapper">
+	<div class="box1 box">
+				变形动画：translate
+	</div>
+	<div class="box2 box">
+		  变形动画块: rotate
+	</div>
+	<div class="box3 box">
+		  变形动画块: scale
+	</div>
+	<div class="box4 box">
+		  变形动画块: skew
+	</div>
+
+	<div class="rotateX box">
+		  变形动画块: rotateX
+	</div>
+	<div class="rotateY box">
+		  变形动画块: rotateY
+	</div>
+	<div class="rotateZ box">
+		  变形动画块: rotateZ
+	</div>
+</div>
+
+<style>
+#wrapper{
+	background-color: #bb0;
+}
+#wrapper div {
+	float: left;
+}
+.box {
+	text-align:center;
+	width: 200px;
+	height: 200px;
+	margin: 50px auto 0;
+
+	transition:all 700ms ease; 
+}
+.box1 {
+	background-color: gold;
+}
+.box1:hover {
+	transform: translate(10px, 10px);
+}
+.box2 {
+	background-color: green;
+}
+.box2:hover{
+	transform: rotate(180deg);
+}
+.box3 {
+	background-color: red;
+}
+.box3:hover{
+	transform: scale(1.5, 1.5);
+}
+.box4 {
+	background-color: blue;
+}
+.box4:hover{
+	transform: skew(45deg,0);
+}
+
+.rotateX {
+	background-color: greenyellow;
+	background: url(http://www.ruanyifeng.com/blogimg/asset/2018/bg2018020901.png);
+	box-shadow: 10px 10px 10px 0 #333;
+	/*透视3D效果*
+	transform-style: perserve-3d;
+	/*初始状态，解决跳转bug问题*/
+	transform: perspective(800px) rotateX(0deg);
+}
+.rotateX:hover{
+	transform: perspective(800px) rotateX(60deg);
+}
+.rotateY {
+	background: greenyellow;
+	line-height:100px;
+	box-shadow: 10px 10px 10px 0 #333;
+	transform: perspective(800px) rotateY(0deg);
+	backface-visibility: hidden;
+}
+.rotateY:hover{
+	transform: perspective(800px) rotateY(180deg);
+}
+
+.rotateZ {
+	background: url(http://www.ruanyifeng.com/blogimg/asset/2018/bg2018020901.png);
+	box-shadow: 10px 10px 10px 0 #333;
+	transform-origin: right top;
+	transform: perspective(800px) rotateZ(0deg);
+}
+.rotateZ:hover{
+	transform: perspective(800px) rotateZ(-60deg);
+}
+
+</style>
+</body>
+</html>

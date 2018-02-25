@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>rem布局</title>
+	<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+	<script type="text/javascript">
+		!function(){
+			var calc = function(){
+				var docEle = document.documentElement;
+				var clientWidth = docEle.clientWidth > 750 ? 750 : docEle.clientWidth;
+				docEle.style.fontSize = 20*(clientWidth/375) + 'px';
+			}
+			calc();
+			window.addEventListener('resize', calc)
+		}()
+	</script>
+	<style>
+		* {
+			margin: 0;
+			padding: 0;			
+		}
+		header {
+			height: 2.5rem;
+			background-color: gold;
+			line-height: 2.5rem;
+			text-align: center;
+			font-size:1.5rem;
+		}
+		article {
+
+		}
+	</style>
+</head>
+<body>
+	<header>
+		<h1>Header</h1>
+	</header>
+
+</body>
+</html>
