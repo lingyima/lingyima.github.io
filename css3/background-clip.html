@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>边框背景</title>
+	<style>
+		div {
+			background: #000 url(./images/meat.png) no-repeat;
+			border: 10px dashed green;
+			width: 200px;
+			height: 200px;
+			padding: 20px;
+			margin: 20px;
+		}	
+		.div1 {
+			background-origin: border-box;
+			background-clip: border-box;
+		}
+		.div2 {
+			background-origin: padding-box;
+			background-clip: padding-box;
+		}
+		.div3 {
+			background-origin: content-box;
+ 			background-clip: content-box;
+		}		
+
+	</style>
+</head>
+<body>
+	<div class="div1"></div>	
+	<div class="div2"></div>	
+	<div class="div3"></div>
+</body>
+</html>

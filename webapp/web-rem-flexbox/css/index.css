@@ -118,7 +118,7 @@ a:link {
 .category_navigation ul {
 	display: flex;
 	flex-wrap: wrap;
-	justify-content: space-around;
+	justify-content: flex-start;
 	align-content: flex-start;
 }
 .category_navigation li {

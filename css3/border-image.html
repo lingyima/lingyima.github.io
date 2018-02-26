@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>边框背景</title>
+	<style>
+		div {
+			background: #fff;
+			border: 15px solid #000;
+			width: 300px;
+			height: 200px;
+		}	
+		.div1 {
+			-webkit-border-image: url(./images/border-image.png) 27;
+/*			-webkit-border-image: url(./images/border-image.png) 33.3333%;*/
+		}
+		.div2 {
+			-webkit-border-image: url(./images/border-image.png) 27 repeat;
+		}
+		.div3 {
+		    padding: 1em;
+		    border: 16px solid transparent;
+		    border-image: 16 repeating-linear-gradient(-45deg, red 0,red 1em,
+		    transparent 0,transparent 2em,blue 0,blue 3em,transparent 0,transparent 4em);
+		    max-width: 20em;
+ 
+		}		
+
+		@-webkit-keyframes ants { to { background-position: 100% 100% } }
+		.div4 { 
+		   -webkit-animation: ants 12s linear infinite;     
+		    padding: 1em;
+		    border: 1px solid transparent;
+		    background: linear-gradient(white, white) padding-box,
+                repeating-linear-gradient(-45deg, black 0, black 25%, transparent 0, transparent 50%) 0 / .6em .6em;
+		}
+	</style>
+</head>
+<body>
+	<div class="div1"></div>	
+	<div class="div2"></div>	
+	<div class="div3"></div>
+	<div class="div4"></div>	
+	<ul>
+		<li>border-image-source: 用在边框的图片的路径</li>
+    	<li>border-image-slice: 图片边框向内偏移</li>
+	    <li>border-image-width: 图片边框的宽度</li>
+	    <li>border-image-outset: 边框图像区域超出边框的量</li>
+	    <li>border-image-repeat: 图像边框是否应平铺(repeated)、铺满(rounded)或拉伸(stretched)</li>
+	    <li>default： none 100% 1 0 stretch</li>
+	</ul>
+</body>
+</html>

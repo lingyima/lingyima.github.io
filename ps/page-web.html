@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>web-page</title>
+</head>
+<body>
+	<style>
+		*{madding:0;padding:0;}
+		ul,ol{list-style:none;}
+		a,a:link{color:#333;text-decoration:none;}
+		body{font-family:"Microsoft YaHei";font-size:12px;}
+
+		.page-list {
+			width: 960px;
+			height: 42px;
+			margin: 0 auto;
+			border: 1px solid grey;
+			display: flex;
+			justify-content: center;
+			align-items: center;
+		}
+		.page-list li {
+			font-size: 12px;
+			height: 22px;
+			line-height: 22px;
+			padding: 0 10px;
+			margin: 0 5px;
+			background-color: gold;
+			text-align: center;
+		}
+		.page-list .page-more {
+			background-color: transparent;
+			padding: 0;
+		}
+	</style>
+	<ul class="page-list">
+		<li class="prev-page"><a href="#">上一页</a></li>
+		<li class="number-page"><a href="#">1</a></li>
+		<li class="number-page"><a href="#">2</a></li>
+		<li class="number-page"><a href="#">3</a></li>
+		<li class="number-page"><a href="#">4</a></li>
+		<li class="number-page page-more">...</li>
+		<li class="number-page"><a href="#">17</a></li>
+		<li class="number-page"><a href="#">18</a></li>
+		<li class="number-page"><a href="#">19</a></li>
+		<li class="number-page"><a href="#">20</a></li>
+		<li class="next-page"><a href="#">下一页</a></li>
+	</ul>
+</body>
+</html>

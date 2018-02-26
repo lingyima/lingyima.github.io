@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>媒体查询</title>
+	<link rel="stylesheet" media="(max-width: 800px)" href="example.css">
+</head>
+<body>
+	<style>
+		@media (max-width: 600px) {
+			.box {
+
+			}
+		}
+	</style>	
+	<pre>
+		<表达式>: (<媒体特征>[:<值>]?)
+		<媒体查询>: [only | not]? <媒体类型> [and <表达式>*]|<表达式>[and<表达式>]*
+		<媒体查询列表>:[<媒体欻性能>[,<媒体查询>]*]?
+
+		<media_query_list>: [<media_query>[',' <media_query>]*]?
+		<media_query>: [only | not] ? <media_type> [ and <expression>] * | <expression> [and <expression>]* 
+		<expression>: '('<media_feature>[:<value>]?)''
+	</pre>
+	<h2>媒体特征</h2>
+	<table>
+		<tr>
+			<th>媒体特征</th>
+			<th>取值</th>
+			<th>接受min max</th>
+			<th>简介</th>
+		</tr>
+		<tr>
+			<td>width</td>
+			<td>length</td>
+			<td>yes</td>
+			<td>设备页面可见区域宽度</td>
+		</tr>
+		<tr>
+			<td>height</td>
+			<td>length</td>
+			<td>yes</td>
+			<td>设备页面可见区域高度</td>
+		</tr>	
+		<tr>
+			<td>device-width</td>
+			<td>length</td>
+			<td>yes</td>
+			<td>设备屏幕可见宽度</td>
+		</tr>			
+		<tr>
+			<td>device-height</td>
+			<td>length</td>
+			<td>yes</td>
+			<td>设备屏幕可见高度</td>
+		</tr>	
+		<tr>
+			<td>orientation</td>
+			<td>portrait|landscape</td>
+			<td>no</td>
+			<td>定义height是否大于等于width.portrait是，landscape否</td>
+		</tr>
+		<tr>
+			<td>aspect-ratio</td>
+			<td>ratio</td>
+			<td>yes</td>
+			<td>定义width与height的比率</td>
+		</tr>				
+		<tr>
+			<td>device-aspect-ratio</td>
+			<td>ratio</td>
+			<td>yes</td>
+			<td>定义device-width与device-height的比率</td>
+		</tr>
+		<tr>
+			<td>color</td>
+			<td>integer</td>
+			<td>yes</td>
+			<td>定义每一组输出设备的彩色原件个数。如果不是彩色设备，则值等于0</td>
+		</tr>	
+		<tr>
+			<td>color-index</td>
+			<td>integer</td>
+			<td>yes</td>
+			<td>定义在输出设备的彩色查询表中的条目数。如果没有使用彩色查询表，则值等于0</td>
+		</tr>
+		<tr>
+			<td>monochrome</td>
+			<td>integer</td>
+			<td>yes</td>
+			<td>定义在一个单色框架缓冲区中每像素包含的单色原件个数。如果不是单色设备，则值等于0</td>
+		</tr>
+		<tr>
+			<td>resolution</td>
+			<td>resolution</td>
+			<td>yes</td>
+			<td>定义设备的分辨率：如：96dpi,300dpi,118dpcm</td>
+		</tr>		
+		<tr>
+			<td>scan</td>
+			<td>progressive|interlace</td>
+			<td>no</td>
+			<td>定义电视类设备的扫描工序</td>
+		</tr>		
+		<tr>
+			<td>grid</td>
+			<td>integer</td>
+			<td>no</td>
+			<td>用来查询输出设备是否使用栅格或点阵。只有1和0才是有效值，1代表是，0代表否</td>
+		</tr>		
+		<tr>
+			<th>媒体类型</th>
+			<th>解释</th>
+		</tr>
+		<tr>
+			<td>all</td>
+			<td>所有设备</td>
+		</tr>
+		<tr>
+			<td>screen</td>
+			<td>彩色电脑屏幕</td>
+		</tr>		
+		<tr>
+			<td>print</td>
+			<td>文档打印或打印预览模式</td>
+		</tr>				
+		<tr>
+			<td>projection</td>
+			<td>项目演示，比如幻灯</td>
+		</tr>					
+		<tr>
+			<td>projection</td>
+			<td>手持设备</td>
+		</tr>
+	
+		<tr>
+			<td>speech</td>
+			<td>演讲</td>
+		</tr>		
+		<tr>
+			<td>tv</td>
+			<td>电视</td>
+		</tr>		
+		<tr>
+			<td>tty</td>
+			<td>固定字母间距的网络的媒体，自如电传打字机</td>
+		</tr>	
+		<tr>
+			<td>braille</td>
+			<td>盲文</td>
+		</tr>		
+		<tr>
+			<td>embossed</td>
+			<td>盲文打印</td>
+		</tr>															
+		<tr>
+			<th>媒体查询规则/类型</th>
+			<th>解释</th>
+		</tr>
+		<tr>
+			<td>@media all and (min-width:800px)</td>
+			<td>所有最小水平屏幕宽度为 800 像素的屏幕应用规则</td>
+		</tr>
+		<tr>
+			<td>@media (min-width:800px)</td>
+			<td>简介方式，同上</td>
+		</tr>
+		<tr>
+			<td>@media (min-width:800px) and (max-width:1200px)</td>
+			<td>所有介于 800px 与 1200px 之间的屏幕应用规则</td>
+		</tr>
+		<tr>
+			<td>@media (min-width:800px) or (orientation:portrait)</td>
+			<td>宽度至少是 800px 或方向是纵向的，则会应用该规则</td>
+		</tr>		
+		<tr>
+			<td>@media (not min-width:800px)</td>
+			<td>最小宽度不是 800px 时，则会应用该规则</td>
+		</tr>		
+		<tr>
+			<td>@media (width:800px) and (height:400px)</td>
+			<td>屏幕正好是 800像素宽、400像素高时应用规则</td>
+		</tr>				
+		<tr>
+			<td>@media (min-width:700px),handhelp and (orientation：landscape)</td>
+			<td>最小宽度为700像素，或是横屏幕的手持设备上，同时应用样式</td>
+		</tr>				
+	</table>
+	<h2>屏幕尺寸</h2>
+	<ul>
+		<li>老智能机器：320px-480px</li>
+		<li>智能手机：>=480px</li>
+		<li>平板电脑：>=768px</li>
+		<li>中等屏幕（桌面显示器）：>=992px</li>
+		<li>大屏幕（大桌面显示器）：>=1200px</li>
+		<li>实现过程：<strong>移动优先原则</strong></li>
+	</ul>
+
+	<style>
+		/* 超小屏幕（手机，小于 768px）*/
+		/* 没有任何媒体查询相关的代码，直接编写代码，移动设备优先 */
+
+		/* 小屏幕（平板电脑，大于等于 768px）*/
+		@media (min-width: 768px) {}
+		
+		/* 中等屏幕（桌面显示器，大于等于 992px）*/
+		@media (min-width: 992px) {}
+
+		/* 大屏幕（大桌面显示器，大于等于 1200px）*/
+		@media (min-width: 1200px) {}
+	</style>
+</body>
+</html>
