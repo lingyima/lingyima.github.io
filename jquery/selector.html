@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>jquery 选择器</title>
+	<script src="https://code.jquery.com/jquery-1.12.4.min.js"
+			integrity="sha256-ZosEbRLbNQzLpnKIkEdrPv7lOy9C27hHQ+Xp8a4MxAQ="
+			crossorigin="anonymous">
+	</script>	
+	<script>
+		$(function(){
+			// 选择这个文档对象
+			console.log($(document))
+
+			// 选择元素
+			$('header').css({backgroundColor: 'rgb(255,255,0)'})
+
+			
+			// 类选择
+			$('.nav-main').css({border: '2px solid green'});
+
+			// id选择
+			$('#nav-home a').css({color: 'red'});
+
+			// 属性选择
+			$('.nav-main a[title=lingyima]').css({color: 'silver'});
+
+			// 选择第一个子元素
+			$('.nav-main li:first a').css({fontSize: '30px'})
+
+			// 奇数子元素
+			$('.nav-main li:odd').css({backgroundColor:'#eee'});
+
+			// 偶数子元素	
+			$('.nav-main li:even').css({backgroundColor:'#ccc'});
+
+			// 第二个子元素	
+			$('.nav-main li:eq(1)').css({fontSize: '40px'});
+
+			// 大于第三个子元素	
+			$('.nav-main li:gt(2) a').css({color:'orange'});
+
+			// input元素
+			$('form :input').css({backgroundColor: 'gold'})
+
+			// 可见div
+			$('.box:visible').css({border:'10px solid red'})
+
+			// 可见div
+			$('.box').has('p').css({border:'10px solid green'})
+			
+		})
+	</script>
+</head>
+<body>
+	<div class="container">
+		<header>
+			<nav class="nav-main">
+				<ul>
+					<li id="nav-home"><a href="#">Home</a></li>
+					<li><a href="#" title="lingyima">Product</a></li>
+					<li><a href="#">Customer</a></li>
+					<li><a href="#">Comunity</a></li>
+					<li><a href="#">Concat</a></li>
+				</ul>
+			</nav>
+		</header>
+		<section>
+			<div class="box" style="display:none"></div>
+			<form>
+				<p>
+					<label for="username">Username</label>
+					<input type="text" name="username" id="username" />
+				</p>
+				<p>
+					<label for="password">Password</label>
+					<input type="password" name="password" id="password" />
+				</p>
+				<p>
+					<label for="language">语言</label>
+					<input type="checkbox" name="language=" id="language-en" /> 英文 <br />
+					<input type="checkbox" name="language=" id="language-fr" /> 法语 <br />
+					<input type="checkbox" name="language=" id="language-ge" /> 德语 <br />
+				</p>								
+			</form>
+			<div class="box">可见</div>
+			<div class="box">
+				<p>p元素内容</p>
+			</div>
+		</section>
+		<footer></footer>
+	</div>
+</body>
+</html>
