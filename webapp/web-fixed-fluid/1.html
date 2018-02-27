@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+ <meta charset="UTF-8" />
+ <title>零壹码生鲜-流体布局--首页</title>
+ <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0" />
+  <link rel="stylesheet" href="./css/reset.css" />
+  <style>
+
+  	/* 容器充满整个宽度和高度 */
+  	.container {
+  		position: absolute;
+  		top: 0;
+  		bottom: 0;
+  		left: 0;
+  		right: 0;
+  		background: gold;
+  	}
+
+  	/* 
+  	 * 头部使用固定定位在微信不能单击链接等bug
+  	 * 在这里使用绝对定位解决以上问题
+  	 * 绝对定位之后头部块区域自动变为内联快元素，因此需要设置宽度为100%
+  	*/
+  	.header {
+  		position: absolute;
+  		top: 0;
+		width: 100%;
+		background: blue;
+				
+		/*效果图上高度为100px，由于手机客户端分辨率为页面效果图的一半，所以像素整体缩小为一半*/
+		height: 50px;
+
+  	}
+  	/*
+  	 * 底部与头部设置同理
+  	 */
+  	.main_navigation {
+  		position: absolute;
+  		bottom: 0;
+		height: 50px;
+		width: 100%;
+		background: #aa0;  		
+  	}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="header"> header</header>
+
+    <section class="content">content</section>
+
+    <nav class="main_navigation">main navigation</nav>
+  </div>
+</body>
+</html>
