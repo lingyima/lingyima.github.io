@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8" />
+	<title>响应式表格</title>
+	<style>
+		.responsive {
+			width: 98%;
+			margin: 0 auto;
+			border: 1px solid #666;
+			border-collapse: collapse;
+		}
+		.responsive th,
+		.responsive td {
+			border: 1px solid #666;
+			pading: .5em 1em;
+		}
+		.responsive th {
+			background-color: #35b558;
+		}
+		.responsive .actions a {
+			color: #ff5c00;
+			text-decoration: none;
+			padding: 0 4px;
+		}
+
+		.responsive caption {
+			font-size: 30px;
+			text-align: center;
+			color: #666;
+		}
+		.responsive .number {
+			text-align: center;
+		}
+
+		@media (max-width: 480px) {
+			.responsive {
+				border: none;
+			}
+			.responsive thead {
+				display: none;
+			}
+			.responsive tr, 
+			.responsive td {
+				display: block;
+				border: none;
+			}
+			.responsive tr {
+				position: relative;
+			}
+			.responsive .number {
+				text-align: left;
+				padding-left: 28%;
+				background-color: #35b558;
+				position: relative;
+			}
+			.responsive .number::before {
+				content: "课程序号";
+				position: absolute;
+				left: .5em;
+				top: 0;
+				font-weight: bold;
+			}
+			.responsive .name {
+				text-align: left;
+				padding-left: 28%;
+				background-color: #efefef;
+				position: relative;
+			}
+			.responsive .name::before {
+				content: "技术";
+				position: absolute;
+				left: .5em;
+				top: 0;
+			}
+			.responsive .operation {
+				position: absolute;
+				top: 0;
+				right: 3px;
+			}
+		}
+
+		
+	</style>
+</head>
+<body>
+<table class="responsive">
+<caption>响应式表格</caption>
+<thead>
+<tr>
+<th>课程序号</th>
+<th>技术</th>
+<th>修改/删除</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="number">10002</td>
+<td class="name">Redis</td>
+<td class="operation">
+	<a href="https://www.lingyima.com">修改</a>
+	<a href="https://www.lingyima.com">删除</a>
+</td>
+</tr>
+<tr>
+<td class="number">10003</td>
+<td  class="name">MariaDB</td>
+<td class="operation">
+	<a href="https://www.lingyima.com">修改</a>
+	<a href="https://www.lingyima.com">删除</a>
+</td>
+</tr>
+<tr>
+<td class="number">10004</td>
+<td  class="name">Memcache</td>
+<td class="operation">
+	<a href="https://www.lingyima.com">修改</a>
+	<a href="https://www.lingyima.com">删除</a>
+</td>
+</tr>
+<tr>
+<td class="number">10005</td>
+<td  class="name">squid</td>
+<td  class="operation">
+	<a href="https://www.lingyima.com">修改</a>
+	<a href="https://www.lingyima.com">删除</a>
+</td class="operation">
+</tr>
+<tr>
+<td  class="number">10006</td>
+<td  class="name">JS</td>
+<td class="operation">
+	<a href="https://www.lingyima.com">修改</a>
+	<a href="https://www.lingyima.com">删除</a>
+</td>
+</tr>
+</tbody>
+</table>
+	
+</body>
+</html>
