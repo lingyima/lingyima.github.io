@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8" />
+	<title>响应式图片</title>
+	<style>
+		
+		img{border:0;}
+
+		div.box {
+			max-width: 1000px;
+			margin: auto;
+		}
+		.box figure {
+			margin:0;
+			padding:0;
+		}
+		.box img{
+			width: 100%;
+		}
+	</style>
+</head>
+<body>
+	<h1>响应式图片</h1>
+	<p><strong>用户代理根据输出设备的分辨率不同加载不同类型的图片</strong>，不会造成<strong>带宽的浪费</strong>。同时，在改变输出设备类型或分辨率时，能及时加载对应类型的图片。</p>
+	<h2>响应式实现方式</h2>
+	<ul>
+		<li>用srcset和sizes加载不同图片</li>
+		<li>picture,source media 加载不同图片</li>
+		<li>用 source type 指定多种格式</li>
+		<li>polyfill-picturefill 浏览器兼容</li>
+	</ul>
+	<div class="box">
+		<h2>用srcset和sizes加载不同图片</h2>
+		<figure>
+			<img title="100vw=100%, srcset 根据宽度加载不同的图片"
+					sizes="(min-width:900px) 900px, calc(100vw)"
+				  	srcset="./images/480X320.gif 480w,
+				  			./images/640X427.gif 640w,
+				  			./images/720X480.gif 720w,
+				  			./images/900X600.gif 900w," 
+				 src="./images/900X600.gif" alt="responsive images" />
+		</figure>
+		<h2> picture, source media 加载不同的图片</h2>
+		<picture>
+			<source media="(max-width: 240px)" srcset="./images/480X320.gif">
+			<source media="(max-width: 320px)" srcset="./images/640X427.gif">
+			<source media="(max-width: 360px)" srcset="./images/720X480.gif">
+			<source media="(max-width: 450px)" srcset="./images/900X600.gif">
+			<img src="./images/900X600.gif" alt="响应式布局图片" />
+		</picture>		
+
+		<h2> 解决 picture 元素兼容性问题</h2>
+		<p><a href="http://scottjehl.github.io/picturefill/">picturefill</a></p>
+	</div>
+<script src="./js/picturefill.min.js" async />
+</body>
+</html>
