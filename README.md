@@ -1,5 +1,8 @@
 # 测试案例
 
+## [Linux 运维架构](./linux-sre)
+- [计算机入门](./linux-sre/computerGetting-started/)
+
 ## webapp 布局解决方案
 - [流式布局](./webapp/web-fixed-fluid/index.html)
 - [rem布局](./webapp/web-rem-fluid/index.html)
