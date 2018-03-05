@@ -6,33 +6,16 @@
 </head>
 <body>
 	<h1>零壹码博客-JavaScript 数据结构与算法之栈</h1>
-	<script src="./js/function.js"></script>
-	<script src="./js/Stack.js"></script>
-	<script>
-		var stack = new Stack();
-
-		// 入栈
-		stack.push("唐僧");
-		stack.push("孙悟空");
-		stack.push("沙僧");
-		echo(stack.push("猪八戒"));
-
-		echo(stack.stdout());
-		echo('获取栈元素大小：' + stack.size())
-		
-		echo('弹栈：' + stack.pop());
-		echo('栈元素列表：' + stack.stdout());
-
-		echo('获取栈大小：' + stack.size());
-		
-		echo('获取顶栈：' + stack.top());
-		echo('获取底栈：' + stack.bottom());
-		
-		echo('清空栈：' + stack.clear());
-		echo('栈元素列表：' + stack.stdout());
-
-		echo('栈元素是否为空：' + stack.isEmpty())
-
-	</script>
+	<!--
+data-main属性指定的js将在加载完reuqire.js后处理，我们把require.config的配置加入到data-main后，就可以使每一个页面都使用这个配置，然后页面中就可以直接使用require来加载所有的短模块名
+。
+data-main还有一个重要的功能，当script标签指定data-main属性时，require会默认的将data-main指定的js为根路径，如上面的data-main="js/main"设定后，我们在使用require(['jquery'])后(不配置jquery的paths)，require会自动加载js/jquery.js这个文件，而不是jquery.js，相当于默认配置了：
+require.config({
+    baseUrl : "js"
+})
+	async: true 异步加载属性, IE 不支持
+	defer: 支持IE
+	-->
+	<script data-main="js/stack-main" src="js/require.js" defer async="true"></script>
 </body>
 </html>

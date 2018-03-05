@@ -1,4 +1,4 @@
-var Stack = function(){
+var stack = function(){
 	return {
 		// item
 		items: [],
