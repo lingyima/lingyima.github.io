@@ -42,7 +42,7 @@
 
 ## 应用服务管理
 - Web Service
-- Nginx
+- [Nginx](./application-service/nginx/)
 - File Server
 - FTP 
 - NFS
