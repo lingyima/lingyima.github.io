@@ -270,9 +270,523 @@
 
 
 
+# 数据库设计
+
+## 用户模型设计
+
+- 用户实体(下面是实体属性)
+	+ 用户姓名
+	+ 登录名
+	+ 密码
+	+ 手机号
+	+ 证件类型
+	+ 证件类型号码
+	+ 邮箱
+	+ 性别
+	+ 邮政编码
+	+ 省
+	+ 市
+	+ 区
+	+ 地址
+	+ 积分
+	+ 注册时间
+	+ 生日
+	+ 用户状态（冻结[不能登陆和购物]|正常）
+	+ 用户级别（优惠政策）
+	+ 用户余额
+
+- 用户表(customer)
+
+### 所有数据字段保存在一个表上带来问题
+- 数据插入异常
+	+ PK：用户登录名
+	+ 用户级别存储（会员级别/级别积分上限/级别积分下限，不需要插入主键）
+	
+- 数据更新异常
+	+ 修改某一行的值时，不得不修改多行数据
+		* 用户等级(青铜级)修改成其他名称(皇冠级)
+		* 修改所有会员的用户级别数据时，表锁
+
+- 数据删除异常	
+	+ 删除某一数据时不得不同时删除另一数据
+		* 删除用户等级名为皇冠级等级
+		* delete from customer where level='皇冠';
+	
+- 数据存在冗余
+	+ 每个用户的用户等级上限和下限
+	+ 数据表过宽，会影响修改表结构的效率
+
+### Solution
+
+#### 满足数据库设计第三范式(3NF)
+> 一个表中的**列**和**其他列**之间既不包含部分**函数依赖关系**也不包含传递函数依赖关系，那么这个表的设计就符合第三范式
+
+
+- 级别积分上限/下限 依赖用户级别
+- 用户级别依赖于登录名
+
+- 拆分原用户表以符合第三范式
+	+ 用户登陆表（登录名/密码/用户状态）
+	+ 用户地址表（省名/市/区/地址/邮编）
+	+ 用户信息表（用户姓名/证件类型/证件号码/手机号/邮箱/性别/积分/注册时间/生日/会员级别/用户余额）
+	+ 用户级别信息（customer_level_info）
+		* 会员级别
+		* 级别积分下限
+		* 级别积分上限
+
+#### 数据表设计
+- 用户登陆表：customer_login
+
+`create table customer_login(
+	customer_id int unsigned auto_increment not null '用户ID',
+	login_name varchar(28) not null comment '用户登录名',
+	password char(32) not null comment 'md5加密的密码',
+	user_status tinyint not null default 1 comment '用户状态(1:正常,0:冻结)',
+	modified_time timestamp not null default CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '最后修改时间',
+primary key pk_customerid(customer_id)
+) engine=innodb comment='用户登陆表';`
+
+- 用户信息表：customer_info
+
+`create table customer_info{
+	customer_info_id int unsigned auto_increment not null comment '自增主键ID',
+	customer_id int unsigned not null comment 'customer_login表的自增ID',
+	customer_name varchar(20) not null comment '用户真实姓名',
+	identity_card_type tinyint not null default 1 comment '证件类型(1:身份证，2:军官证，3:护照)'，
+	identity_card_no varchar(20) comment '证件号码',
+	mobile_phone int unsigned comment '手机号',
+	customer_email varchar(50) comment '邮箱',
+	gender char(1) comment '性别',
+	user_point int not null default 0 comment '用户积分',
+	register_time timestamp not null comment '注册时间',
+	birthday datetime comment '会员生日',
+	customer_level tinyint not null default 1 '会员级别（1：普通会员，2：青铜会员，3：白银会员，4：黄金会员，5：钻石会员）',
+	user_money decimal(8,2) not null default 0.00 comment '用户余额',
+	modified_time timestamp not null default current_timestamp on update current_timestamp comment '最后修改时间',
+	primary key pk_customerinfoid(customer_info_id)
+} engine=innodb comment '用户信息表'`
+
+
+- 用户级别表(customer_level_info)
+
+`create table customer_level_info(
+	customer_level tinyint not null auto_increment comemnt '会员级别ID',
+	level_name varchar(10) not null comment '会员级别名称',
+	min_point int unsigned not null default 0 comment '级别最低积分',
+	max_point int unsigned not null default 0 comment '级别最高积分',
+	modified_time timestamp not null default current_timestamp 0 on update current_timestamp comment '最后修改时间',
+	primary key pk_levelid(customer_level)
+) engine=innodb comment '用户级别信息表'`
+
+
+- 用户地址表(customer_addr)
+
+`create table customer_addr(
+	customer_addr_id int unsigned auto_increment not null comment '自增主键ID',
+	customer_id int unsigned not null comment 'customer_login表的自增ID',
+	zip smallint not null comment '邮编',
+	province smallint not null comment '地区表中省份的ID',
+	city smallint not null comment '地区表中城市的ID',
+	district smallint not null comment '地区表中区的ID',
+	address varchar(200) not null comment '具体的地址门牌号',
+	is_default tinyint not null comment '是否默认',
+	modified_time timestamp not null default current_timestamp on update current_timestamp comment '最后修改时间',
+	primary key pk_customeraddid(customer_addr_id)
+) engine=innodb comment '用户地址表'`
+
+
+- 用户积分日志表(customer_point_log)
+`create table customer_point_log(
+	point_id int unsigned not null auto_increment comment '积分日志ID',
+	customer_id int unsigned not null comment '用户ID',
+	source tinyint unsigned not null comment '积分来源(0：订单，1：登录，2：活动)',
+	refer_number int unsigned not null default 0 comment '积分来源相关编号',
+	change_point smallint not null default 0 comment '变更积分数',
+	create_time timestamp not null comment '积分日志生成时间',
+	primary key pk_pointid(point_id)
+) engine=innodb comment '用户积分日志表'`
+
+- 用户余额变动表(customer_balance_log)
+`create table customer_balance_log(
+	balance_id int unsigned not null auto_inrement comment '余额日志ID',
+	customer_id int unsigned not null comment '用户ID',
+	source tinyint unsigned not null default 1 comment '记录来源（1：订单，2：退货单）',
+	source_sn int unsigned not null comment '相关单据ID',
+	create_time timestamp not null default current_timestamp comment '记录生成时间',
+	amount decimal(8,2) not null default 0.00 comment '变动金额',
+	primary key pk_balanceid (balance_id)
+) engine=innodb comment '用户余额变动表'`
+
+- 用户登录日志表（customer_login_log）
+`create table customer_login_log(
+	login_id int unsigned not null auto_increment comment '登录日志ID',
+	customer_id int unsigned not null comment '登录用户ID',
+	login_time timestamp not null comment '用户登录时间',
+	login_ip int unsigned not null comment '登录IP',
+	login_type tinyint not null comment '登录类型（0：未成功，1：成功）',
+	primary key pk_loginid(login_id)
+) engine=innodb comment '用户登录日志表'`
+
+
+- 业务场景
+	+ 用户每次登录都会记录 customer_login_log 日志
+	+ 用户登录日志保存一年，一年后可以删除
+
+- 登录日志表的分区类型及分区键
+	+ 使用 range 分区
+	+ login_time 作为分区键
+
+`create table customer_login_log(
+	login_id int unsigned not null auto_increment comment '登录日志ID',
+	customer_id int unsigned not null comment '登录用户ID',
+	login_time timestamp not null comment '用户登录时间',
+	login_ip int unsigned not null comment '登录IP',
+	login_type tinyint not null comment '登录类型（0：未成功，1：成功）',
+	primary key pk_loginid(login_id)
+) engine=innodb comment '用户登录日志表'
+partitoin by range(year(lgin_time)) (
+	partition p0 values less than(2015),
+	partition p1 values less than(2016),
+	partition p2 values less than(2017)
+);`
+
+insert 插入数据
+`select * from customer_login_log;`
+`select table_name, partition_name, partition_description, table_rows from infomation_shema.PARTITIONS where table_name='customer_login_log'`
+
+`alter table customer_login_log add partition (partition p4 values less than(2018))`
+
+
+- 删除分区表
+`alter table customer_login_log drop partition p0;`
+
+- 建立归档表
+`create table arch_customer_login_log(
+	login_id int unsigned not null auto_increment comment '登录日志ID',
+	customer_id int unsigned not null comment '登录用户ID',
+	login_time timestamp not null comment '用户登录时间',
+	login_ip int unsigned not null comment '登录IP',
+	login_type tinyint not null comment '登录类型（0：未成功，1：成功）',
+	primary key pk_loginid(login_id)
+) engine=innodb comment '用户登录日志归档表'`
+
+- 分区迁移
+`alter table customer_login_log exchange partition p2 with table arch_customer_login_log;`
+
+- 分区迁移之后删除分区p2
+`alter table customer_login_log drop partition p2;`
+
+- 查看归档
+`select * from customer_login_log;`
+
+- 修改归档引擎(只能查找操作，不能写操作)
+`alter table arch_customer_login_log engine=ARCHIVE`
+
+## 分区表的注意事项
+- 结合业务场景选择分区键，避免跨分区查询
+- 对分区表进行查询最好在where从句中包含分区键
+- 具有主键或唯一索引的表，主键或唯一索引必须是分区键的一部分
+
+
+
+## 商品实体
+- 商品名称
+- 国条码
+- 分类
+- 供应商
+- 品牌名称
+- 销售价格
+- 成本
+- 上下架状态
+- 颜色
+- 重量
+- 长度
+- 宽度
+- 高度
+
+- 有效期
+- 生产时间
+- 描述
+- 图片信息
+
+
+- 品牌信息表(brand_info)
+`create table brand_info(
+	brand_id small int unsigned auto_increment not null comment ''品牌ID,
+	brand_name varchar(50) not null comment '品牌名称',
+	telephone varchar(50) not null comment '联系电话',
+	brand_web varchar(100)  comment '品牌网站',
+	brand_logo varchar(100) comment '品牌logo RUL',
+	brand_desc varchar(150) comment '品牌描述', 
+	brand_status tinyint not null default 0 comment '品牌状态（0：禁用，1：启用）',
+	brand_order tinyint not null default comment '排序',
+	modified_time timestamp not null default current_timestmap on update current_timestamp comment '最后修改时间',
+	primary key pk_brandid(brand_id)
+) engine=innodb comment="品牌信息表"`
+
+- 分类信息表(product_category)
+`create table product_category(
+	category_id smallint unsigned auto_increment not null comment '分类ID',
+	category_name varchar(10) not null comment '分类名称',
+	category_code varchar(10) not null comment '分类编号',
+	parent_id smallint unsigned not null default 0 comment '父分类ID',
+	category_level tinyint not null default 1 comment '分类层级',
+	category_status tinyint not null default 1 comment '分类状态',
+	modified_time timestamp not null default current_timestmap on update current_timestamp comment '最后修改时间',
+	primary key pk_categoryid(category_id)
+) engine=innodb comment='商品分类表'`
+
+
+- 供应商信息表(supplier_info)
+`create table supplier_info(
+	supplier_id int unsigned auto_increment not null comment '供应商ID',
+	supplier_code char(8) not null comment '供应商编号',
+	supplier_name char(50) not null comment '供应商名称',
+	supplier_type tinyint not null comment '供应商类型（1：直营，2：平台）',
+	link_man varchar(10) not null comment '供应商联系人',
+	phone_number varchar(50) not null comment '联系电话',
+	bank_name varchar(50) not null comment '供应商开户银行名称',
+	bank_account varchar(50) not null comment '银行账号',
+	address varchar(200) not null comment '供应商地址',
+	supplier_status tinyint not null default 0 comment '状态（0：禁用，1：启用）',
+	modified_time timestamp not null default current_timestmap on update current_timestamp comment '最后修改时间',
+	primary key pk_supplierid(supplier_id)
+) engine=innodb comment '供应商信息表';`
+
+- 商品信息表(product_info)
+`create table product_info(
+	product_id int unsigned auto_increment not null comment '商品ID',
+	product_code char(16) not null comment '商品编码',
+	product_name varchar(20) not null comment '商品名称',
+	bar_code varhcar(50) not null comment '国条码',
+	brand_id int unsigned not null comment '品牌表的ID',
+	one_category_id small int unsigned not null comment '一级分类ID',
+	two_category_id  small int unsigned not null comment '二级分类ID',
+	three_category_id  small int unsigned not null comment '三级分类ID',
+	supplier_id int unsgined not null comment '商品的供应商ID',
+	price decimal(8,2) not null comment '商品销售价格',
+	average_cost decimal(8,2) not null comment '商品加权平均成本',
+	publish_status tinyint not null default 0 comment '上下架状态（0:下架，1：上架）',
+	audit_status tinyint not null default 0 comment '审核状态（0：未审核，1：已审核）',
+	weight float comment '商品重量',
+	length float comment '商品长度',
+	height float comment '商品高度',
+	width float comment '商品宽度',
+	color_type enum('红','黄','蓝','黑'),
+	production_date datetime not null comment '生产日期',
+	shelf_life int not null comment '商品有效期',
+	descript text not null comment '商品描述',
+	indate timestamp not null default CURRENT_TIMESTAMP comment '商品录入时间',
+	modified_time timestamp not null default current_timestmap on update current_timestamp comment '最后修改时间',
+	primary key pk_productid(product_id)
+) engine=innodb comment '商品信息表';`
+
+
+- 商品图片表(product_pic_info)
 
 
 
 
+# MySQL分区表
+- 确认MySQL 服务器是否支持分区表
+mysql> show plugins;
+partition active 
+
+## 分区表的特点
+- 在逻辑为一个表，在物理上存储多个文件中
+`create table customer_login_log(
+	login_id int unsigned not null auto_increment comment '登录日志ID',
+	customer_id int unsigned not null comment '登录用户ID',
+	login_time timestamp not null comment '用户登录时间',
+	login_ip int unsigned not null comment '登录IP',
+	login_type tinyint not null comment '登录类型（0：未成功，1：成功）',
+	primary key pk_loginid(login_id)
+) engine=innodb comment '用户登录日志表'
+partition by hash(customer_id)
+partitions 4;`
+
+- 非分区表的物理文件
+	+ customer_login_log.frm
+	+ customer_login_log.idb
+
+- 分区表的物理文件
+	+ customer_login_log.frm
+	+ customer_login_log#p0.ibd
+	+ customer_login_log#p1.ibd
+	+ customer_login_log#p2.ibd
+	+ customer_login_log#p3.ibd
+
+
+## hash分区(hash)的特点
+- 根据MOD（分区键，分区数）的值把数据行存储到表的不同分区内
+- 数据可以平均的分布在各个分区中
+- 分区的键值必须是一个int 类型的值，或是通过函数可转换为 int 类型
+
+
+
+- 如何建立hash分区表
+`create table customer_login_log(
+customer_id int(10) unsigned not null,
+login_time timestamp not null,
+login_ip int(10) unsigned not null,
+login_type tinyint(4) not null
+) engine=innodb
+partition by hash(customer_id)
+partitions 4` 分区数量
+
+`partition by hash(unix_timestamp(login_time))
+partitions 4`
+
+- 插入数据时跟正常插入数据方式一样的
+
+## hash分区表可用的函数
+- abs()
+- dayofmonth()
+- datediff()
+- hour()
+- mod()
+- second()
+- to_seconds()
+- year()
+- ceiling()
+- dayofweek()
+- extract()
+- microsecond()
+- month()
+- time_to_sec()
+- unix_timestamp()
+- day()
+- dayofyear()
+- floor()
+- minute()
+- quarter()
+- to_days()
+- weekday()
+- yearweek()
+
+
+
+
+
+## 按范围分区(range)
+
+- 根据分区键值的范围把数据行存储到表的不同分区中
+- 多个分区的范围要连续，但不能重叠
+- 默认情况下使用 values less than 属性，即每个分区不包括指定的那个值
+
+
+- 如何范围分区
+
+`create table customer_login_log(
+customer_id int(10) unsigned not null,
+login_time timestamp not null,
+login_ip int(10) unsigned not null,
+login_type tinyint(4) not null
+) engine=innodb
+partition by range (customer_id) (
+	partition p0 values less than (10000),
+	partition p1 values less than (20000),
+	partition p2 values less than (30000),
+	partition p3 values less than MAXVALUE
+)`
+- p0: 小于10000的customer_id，存储与p0， 0-9999
+- p1: 小于20000的customer_id，存储与p0， 10000-19999
+- p0: 大于30000的customer_id，存储与p3， > 30000 
+
+- 使用场景
+	+ 分区间为日期或是时间类型
+	+ 所有查询中都包括分区键
+	+ 定期按分区范围清理历史数据
+
+
+
+## List 分区
+- 按分区键的列表进行分区
+- 同范围分区一样，各分区的列表值不能重复
+- 每一行数据必须能找到对应的分区列表，否则数据插入失败
+
+- 如何建立 li分区
+`create table customer_login_log(
+customer_id int(10) unsigned not null,
+login_time timestamp not null,
+login_ip int(10) unsigned not null,
+login_type tinyint(4) not null
+) engine=innodb
+partition by list (login_type) (
+	partition p0 values in (1,3,5,7,9),
+	partition p1 values in (2,4,6,8)
+)`
+- insert into 插入login_type 10 出现错误代码：1526
+
+
+## MySQL性能问题
+
+### 超高的QPS/TPS
+> QPS：每秒中处理的查询量
+- 风险：效率底下的SQL
+
+- CPU 10ms 处理 1个SQL
+- 1s 处理 100个sql
+- QPS <= 100
+
+- 100ms 处理 1个sql
+- QPS <= 10
+
+
+### 大量的并发和超高的CPU使用
+- 风险
+- 大量的并发：数据库连接数被占满（MySQL：max_connection 默认100）
+- 超高的CPU使用率：CPU 资源耗尽而出现宕机
+
+- 并发量：同一时间数据库处理的业务适量
+- 连接数：同一时间连接数据库
+
+
+### 磁盘IO
+- 风险：
+	+ 磁盘IO性能突然下降（解决：使用更快的磁盘设备）
+		* 更好的raid卡
+		* SSD
+		* fashion IO
+	+ 其他大量消耗磁盘性能的计划任务（调整计划任务，做好磁盘维护）
+		* 备份
+
+### 网卡流量
+- 风险: 网卡IO被占满（1000Mb/8 = 100MB）
+- solution:
+	+ 减少从服务器的数量
+	+ 进行分级缓存
+	+ 避免使用 `select *` 进行查询
+	+ 分离业务网络和服务器网络
+
+
+### 大表带来的问题
+
+
+### 大事务带来的问题
+
+
+
+
+
+
+
+
+- Web服务器横向发展
+- 数据库服务器
+	+ Master(1)/Slave(15)
+		* Master 故障，没有高可靠性
+- 数据库影响原因(CPU:64 core, Mem: 512GB)
+	+ QPS(Query Per Second) & TPS(transaction per second)代表每秒执行的事务数量
+	+ 并发请求/CPU idle
+	+ 磁盘IO
+
+
+
+
+
+
+- SQL 查询速度
+- 服务器硬件（CPU/内存/磁盘IO/网卡流量）
 
 ## 数据库解决方案
