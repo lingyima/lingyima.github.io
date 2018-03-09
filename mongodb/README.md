@@ -195,6 +195,153 @@ db.auth('test','testpwd')
 ## 消除重复
 `db.stu.distinct(去重字段, {条件})`
 
+## 聚合 aggregate
+`db.stu.aggregate([{管道:{表达式}}])`
+
+- 管道
+$group: 集合中的文档分组
+
+- 按gender分组，counter作为计算男生，女生的总人数
+`db.stu.aggregate([
+	{
+		$group:
+			{
+				_id: '$gender',
+				counter: {$sum:1} 或者 {$sum:'$age'}, {$push:'$$ROOT'}
+			}
+	}
+])`
 
 
+- $match: 过滤数据
+age > 20
+db.stu.aggregate([
+	{$match:{age:{$gt:20}}}
+])
+
+- $project: 投影
+	+ 结果集中一部分显示
+`db.stu.aggregate([
+	{
+		$group:
+			{
+				_id: '$gender',
+				counter: {$sum:1} 或者 {$sum:'$age'}, {$push:'$$ROOT'}
+			}
+	},
+	{
+		$project: {
+			_id: 0,
+			counter: 1
+		}
+	}
+])`
+
+
+- $sort:
+`db.stu.aggregate([
+	{$group:{
+				_id: '$gender',
+				counter: {$sum:1} 或者 {$sum:'$age'}, {$push:'$$ROOT'}
+			}
+	},
+	{$project: {_id: 0,counter: 1}
+	},
+	{$sort:{counter:1}}
+])`
+
+$limit
+$skip
+
+- $unwind: 将数组类型的字段进行拆分
+`db.t2.insert({_id:1, title:'t-shirt', size:['M','L','S']})`
+
+`db.t2.aggregate([
+	{$unwind:'$size'}
+])`
+
+
+- 表达式
+$sum
+$avg
+$min
+$max
+$push: 数组
+$first
+$last
+
+- $$ROOT: 将文档内容加入到结果集的数组中
+
+
+# explain 性能分析
+`db.t1.find().explain('executionStats')`
+
+# 创建索引
+`db.t1.ensureIndex({属性:1[,属性:2]})`
+
+db.t1.getIndexes()
+db.t1.dropIndexes('索引名称')
+
+
+# 用户管理
+> 角色-用户-数据库的安全管理方式
+
+- 系统角色
+	+ root: 只在admin数据库的可用，超级账号/超级权限
+	+ Read: 允许用户读取指定数据库
+	+ readWrite: 允许用户读写指定数据库
+
+
+## 创建超级管理员
+`use admin
+db.createUser({
+	user:'admin',
+	pwd:'123',
+	roles:[{role:'root',db:'admin'}]
+})`
+
+- 启用安全认证
+sudo vi /etc/mongod.conf
+	ecurity:
+		authorization: enabled
+
+`$ mongo --help`
+`$ mongo -u admin -p 123 --authenticationDatabase admin`
+> db
+> use admin
+> show collections
+> db.syste.users.find()
+> show users()
+
+- 创建普通用户
+`use test
+db.createUser({
+	user:'test',
+	pwd:'123',
+	roles:[{role:'readWrite',db:'test'}]
+})`
+
+
+# 复制(副本集)
+
+1. create directory
+`$ mkdir {t1,t2}`
+
+2. start mongod
+`mongod --help`
+`$ mongod --bind_ip 192.168.100.1 --port 12017 --dbpath ~/t1 --replSet rs0`
+`$ mongod --bind_ip 192.168.100.1 --port 12017 --dbpath ~/t2 --replSet rs0`
+
+
+# 手动备份
+
+- 备份
+`$ mongodump -u user -p 123 -h host --authenticationDatebase dbname -d dbname -o dbdirectory`
+
+- 恢复
+`$ mongorestore -u admin -p 123 -h host  --authenticationDatebase admin -d dbname --dir dbdirectory`
+`--dir: 备份数据所在位置`
+
+# py交互
+sudo pip install pymongo
 

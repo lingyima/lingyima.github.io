@@ -790,3 +790,96 @@ partition by list (login_type) (
 - 服务器硬件（CPU/内存/磁盘IO/网卡流量）
 
 ## 数据库解决方案
+
+## 如何对评论进行分页展示
+`explain select customer_id, title, content from product_comment where audit_status=1 and product_id = 199727 limit 0,5;`
+- SQL如何使用索引
+- 连接查询的执行顺序
+- 查询扫描的数据行数
+
+### 执行计划 explain
+- ID: 表示执行select语句的顺序
+	+ ID 值相同时，执行顺序由上至下
+	+ ID 值越大优先级越高，越先被执行
+
+- select_type:
+	+ simple : 不包含子查询或是union
+	+ primary: 按主键查询
+	+ subquery: select列表中的子查询
+	+ dependent subquery: 依赖外部结果的子查询
+	+ union：Union操作的第二个或是之后的值为union
+	+ dependento union： 当union作为子查询时，第二或是第二个后的查询的select_type值
+	+ union result: union产生的结果集
+	+ derived: 出现在from子句中的子查询
+primary > simple > subquery > dependent subquery
+
+- table列
+	+ 表的名称
+	+ unionM,N: unicon产生结果集
+	+ derivedN/subqueryN: 有id为N的查询产生结果
+
+- partitions列
+	+ 分区表的ID
+	+ NULL：非分区表
+
+- type:
+	+ system：表中只有一行
+	+ const: 表中有且只有**一个匹配的行**时使用，如对**主键或唯一索引的查询**，这是效率最高的连接方式
+	+ eq_ref：**唯一索或主键引查找**，对于每个索引键，表中只有**一条记录与之匹配**
+	+ ref：**非唯一索引查**找，返回匹配某个单独值得**所有行**
+	+ ref_of_null：雷士ref，附加了对**null**值列的查询
+	+ index_mer：索引**合并优化**方法
+	+ ge
+	+ range： **索引范围扫描**，between,<,>等查询条件
+	+ index: Full index Scan **全索引扫描**，同ALL的区别是，遍历的是**索引树**
+	+ all：**全表扫描**，效率最差
+
+- possible_keys 可能索引优化查询
+	 
+- key 优化查询实际使用的索引
+	+ NULL： 没有可用的索引
+	+ 使用覆盖索引：则该索引金出现在key列中
+- key_len 索引**字节数**
+	+ 索引字段的最大可能长度
+	+ 有字段定义计算而来，并非数据的实际长度
+
+- ref: key索引查询时的来源
+- rows 估算的读取的行数，统计抽样结果，并不准确
+- filtered 返回结果的行数占需读取行数的百分比，值越大越好，依赖统计信息
+
+- Extra
+	+ Distinct : 优化distince操作，在找到第一匹配的元祖后即停止找同样值的动作
+	+ Not exists: 使用not exists来优化查询。如 not in
+	+ Using filesort ： 额外操作进行排序，如order by, group by 查询中
+	+ Using index: 使用覆盖索引进行查询
+	+ Using temporary : 临时表来处理查询，常见于排序、子查询、和分组查询
+	+ Using where： where条件来过滤数据
+	+ select tables optimized away: 索引来获得数据，不用访问表
+
+- 无法展示存储过程，触发器/UDF对查询的影响
+- 早期版本仅支持select
+
+select count(distinct audit_status)/count(*) as audit_rate, 
+count(distince product_id)/count(*) as product_rate from product_comment;
+ 
+- 越接近1使用该字段放左侧，创建索引
+
+create index idx_productid_auditStat on product_comment(product_id,audit_status)
+
+- 进一步优化
+select t.customer_id, t.title, t.content
+from (
+select comment_id from product_comment
+where produt_id=199727 and audit_status=1 limit 0,15
+) a join product_comment t
+on a.comment_id = t.comment_id;
+
+
+
+## 删除重复数据
+- 同一订单同一商品的重复评论
+
+
+
+
+

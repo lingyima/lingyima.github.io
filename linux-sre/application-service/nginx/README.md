@@ -86,6 +86,12 @@
 	+ Mail modules
 - 第三方模块：3rd party modules
 
+
+## 安装 Nginx 前提
+- [pcre库](https://sourceforge.net/projects/pcre/files/pcre/) 用于解析正则
+- [zlib库](http://www.zlib.net/)
+- [openssl下载地址](https://github.com/openssl/openssl)
+
 ## 编译安装Nginx(epel源)：major.minor(偶数，稳定版).release
 `/etc/yum.repos.d/nginx.repo
 [nginx]
@@ -95,17 +101,19 @@ gpgcheck=0
 enabled=1`
 
 `yum -y groupinstall "Development Tools" "Server Platform Development"`
+
 `yum -y install pcre-devel openssl-devel zlib-devel`
-./configure --prefix=/usr/local/nginx \
+
+`./configure --prefix=/usr/local/nginx \
 --user=nginx --group=nginx \
 --sbin-path=/usr/sbin/nginx \
 --conf-path=/etc/nginx/nginx.conf \
 --error-log-path=/var/log/nginx/error.log \ 		
 --http-log-path=/var/log/nginx/access.log \
 --pid-path=/var/run/nginx/nginx.pid \
---lock-path=/var/lock/nginx.lock \
+--lock-path=/var/lock/nginx.lock \`
 
-编译模块：启用--with, 禁用--without
+- 编译模块：启用--with, 禁用--without
 --with-http_ssl_module \
 --with-http_stub_status_module \		状态页
 --with-http_gzip_static_module \
@@ -113,18 +121,19 @@ enabled=1`
 --with-http_mp4_module \
 --with-debug \
 
-临时文件缓冲目录
+- 安装 pcre,zlib,openssl 源码
+--with-pcre=../pcre-8.39 \
+--with-zlib=../zlib-1.2.8 \
+--with-openssl=../openssl-master
+
+- 临时文件缓冲目录
 --http-client-body-temp-path=/var/tmp/nginx/client \	上传文件临时缓冲目录
 --http-proxy-temp-path=/var/tmp/nginx/proxy \			代理服务器缓冲目录
 --http-fastcgi-temp-path=/var/tmp/nginx/fastcgi \		Fastcgi临时缓冲目录
 --http-uwsgi-temp-path=/var/tmp/nginx/uwsgi \
 --http-scgi-temp-path=/var/cahe/nginx/scgi \
 
-make && make install
-
-
-
-
+`make && make install`
 
 			
 ## Nginx 信号控制
@@ -148,12 +157,11 @@ make && make install
 - 重读配置文件
 `# nginx -HUB PID`
 
-- 关闭服务
+- 关闭服务-PID(主进程号)
 `# kill -QUIT pid`
 
-- PID：主进程
-
-- kill -signal `cat /usr/local/nginx/log/nginx.pid`
+- kill -signal 
+`# cat /usr/local/nginx/log/nginx.pid`
 
 
 ## 配置文件的组成部分
@@ -212,15 +220,32 @@ make && make install
 - pid /var/run/nginx.pid;
 
 #### worker_rlimit_nofile number;
-- 单个worker进程所能够打开的最大文件数
+- 单个 worker 进程所能够打开的最大文件数
 - worker_rlimit_nofile 1024;
+
+- 每个进程最多可打开的文件数
+`$ ulimit -a`
+	open files: 1024
+`$ ulimit -n 500` 修改
+
+- 配置文件中修改可打开的文件数
+`# vim /etc/security/limits.conf`
+	soft nofile 65535 默认：默认可打开文件数
+	hard nofile 100000 解释：ulimit可最多修改个数
+
+- 查看最多可打开连接数
+- `# cat /proc/sys/fs/file-max`
+
+
+
+
 
 ### 性能优化相关的配置
 
 #### worker_process number | auto
-- worker的进程数；
-- 通常应该为CPU的核心数减1（原因操作系统运行一个Core）；
-
+> Nginx进程平均耗费10M-12M内存
+- worker 进程数；
+- 通常应该为 CPU 的核心数减1（原因操作系统运行一个Core）；
 - auto: nginx 1.8+支持
 
 - 16 core：
@@ -281,7 +306,7 @@ make && make install
 ## 事件相关的配置
 
 #### worker_connections number;
-- 每个worker进程所能够并发打开的最大连接数: 65535
+- 每个worker进程所能够**并发**打开的最大连接数: 65535
 - 依赖于：`worker_rlimit_nofile`
 - 最大并发连接数：`worker_processes * worker_connections`
 
@@ -346,7 +371,7 @@ mail.lingyima.com, www.lingyima.com`
 
 #### sendfile on | off;
 - 是否启用sendfile功能，默认off
-- 在内核中直接包装响应报文
+- 在内核中直接包装响应报文，不用往用户空间返回
 
 ### 定义路径相关配置
 #### root path;
@@ -428,7 +453,7 @@ location /test/ {
 ### 定义客户端请求的相关配置
 
 #### keepalive_timeout timeout [header_timeout];
-> 设定保持连接的超时时长，0 表示禁止长连接；默认为 75s;
+> 设定保持连接的超时时长，0表示禁止长连接；默认为 65s;
 - 客户端连接服务器nginx连接超时时长
 
 #### keepalive_requests number;
@@ -1196,13 +1221,445 @@ http {
 ## 浏览器缓存
 - http协议缓存机制（Expires; Cache-control等）
 - 浏览器记录访问的页面进行缓存，并记录文件最后一次修改时间
-- 如果在向服务器请求同一个文件，发送文件附带最后修改时间，服务器收到该文件后比较最后一次修改时间对比，相等，则304返回状态，客户端从本地读取该文件。
+- 如果在向服务器请求同一个文件，先本地查找缓存文件是否校验过期，没有过期从缓存文件读取内容。当发送文件附带最后修改时间，服务器收到该文件后比较最后一次修改时间对比，相等，则304返回状态，客户端从本地读取该文件。
+
+- 检验过期机制
+	+ 校验是否过期：Expires, Cache-Control(max-age)
+		* 本地是否过期
+		* Expires: http/1.0
+		* Cache-Control(max-age): http/1.1
+	+ Etag: 协议中 Etag 头信息校验
+		* 
+	+ Last-Modified: 头信息校验
+
+### expires
+- Syntax: expires [modified] time;
+	+ 添加expires, Cache-Control
+	+ expires epoch | max | off;
+- Default: expires off;
+- Context: http, server, location, if in location
+
+location /test.html {
+	expires 24h;
+}
+
+### 跨域访问
+> 浏览器禁止跨域访问
+
+- CSRF
+
+- Syntax: add_header name value [alywas];
+- Default:-
+- Context: http, server, location, if in location
+
+- 响应 Access-Control-Allow-Origin 信息
 
 
+location /cross.html {
+	add_header Access-Control-Allow-Origin https://www.allow.com;
+	add_header Access-Control-Allow-Methods GET,POST,PUT,DELETE,OPTIONS;
+}
+
+- 打开了CSRF攻击：
+`add_header Access-Control-Allow-Origin *;`
+
+
+### 防盗链
+> 目的：防止资源被盗用
+
+- 区别哪些请求时非正常用户请求
+
+### 给予http_refer防盗链配置模块
+- Syntax: valid_referers none | 
+- Default: 
+- Context: 
+
+`location / {
+	# none: 允许没有代理信息
+	# blocked: 允许携带没有协议信息的
+	# 116.2.32.20：允许的 IP
+	valid_referers none blocked 116.2.32.20 ~/google\./;
+	# 没有值非0
+	if ($invalid_referer) {
+		return 403;
+	}
+}`
+
+`# curl -I http://domain.com`
+`-I: header`
+
+`# curl -e "http://www.baidu.com" -I https://domain.com`
+`referer: http://www.baidu.com`
 
 # 代理服务
+
+## 正向代理
+> 代理的对象是客户端
+- 通过正向代理服务器访问互联网
+
+## 反向代理
+> 代理的对象是服务器端
+
+
+
+## proxy_pass URL;
+- Syntax: proxy_pass URL;
+- Default:-
+- Context: location, ifin locatin, limit_except
+
+- URL:
+	+ http://domain:port/uri/
+	+ https://ip:port/uri/
+	+ unix:/tmp/pid.socket:/uri/;
+
+
+## 反向代理配置
+- /opt/app/fan/1.html
+1. 本地服务：vim /etc/nginx/conf.d/realserver.conf
+	listen 8080
+
+2. 对外服务：vim /etc/nginx/conf.d/website.conf
+location ~/1.html$ {
+	listen 80;
+	proxy_pass http://127.0.0.1:8080;
+}
+
+3. 不能直接访问8080， 访问80端口方向代理访问8080
+
+
+## 正向代理配置
+- 123.2.30.2的服务器才可以访问一下配置的服务器
+1. admin.conf
+	location / {
+		if ($http_x_forwarded_for !~* "^123.2.30.2"){
+			return 403;
+		}
+	}
+
+- 123.2.30.2 配置正向代理
+`# DNS解析 
+resolver 8.8.8.8;
+location / {
+	proxy_pass http://$http_host$request_uri;
+}`
+
+- Chrome插件 SwitchySharp
+
+
+
+
+### 缓冲区
+proxy_buffering on | off
+default: on;
+http,server,location;
+
+- 扩展
+	+ proxy_buffer_size
+	+ proxy_buffers
+	+ proxy_busy_buffers_size
+
+### 跳转重定向
+- proxy_redirect default;
+proxy_redirect off; 
+proxy_redirect redirect replacement;
+- Default: proxy_redirect default;
+- Context: http, server, location
+
+### 头信息
+- Syntax:proxy_set_header field vluae;
+- default: proxy_set_header Host $proxy_host;
+proxy_set_header Connection close;
+- context: http,server,location
+
+- 扩展：proxy_hide_header, proxy_set_body
+
+### 超时
+- Syntax: proxy_connect_timeout time;
+- Default: proxy_connect_timeout 60s;
+- Context: http, server, location
+
+- 扩展:proxy_read_timeout, proxy_send_timeout
+
+
+## 生产代理服务配置
+`location / {
+	proxy_pass http://127.0.0.1:8000;
+	include proxy_param.conf;
+}`
+
+- proxy_param.conf
+`# 后端服务器返回301地址跳转
+proxy_redirect default;
+proxy_set_header Host $http_host;
+proxy_set_header X-Real-IP $remote_addr;
+proxy_connect_timeout 30;
+proxy_send_timeout 60;
+proxy_read_timeout 60;
+proxy_buffer_size 32k;
+proxy_buffering on;
+proxy_buffers 4 128k;
+proxy_busy_buffers_size 256k;
+proxy_max_temp_file_size 256k`
+
+
+
+
 
 # 负载均衡调度器 SLB
 
 # 动态缓存
 
+
+# 动静分离
+- index.html
+	+ 加载jquery文件
+	+ 加载图pain
+	+ ajax调用jsp
+	
+
+- vim dongjingfenli.conf
+upstream java_api {
+	server 127.0.0.1:8000;	
+}
+
+server {
+	location ~ \.jsp$ {
+		proxy_pass http://java_api;
+		index index.html index.htm;
+	}
+
+	location ~ \.(jpg|png|gif)$ {
+		expires 1h;
+		gzip on;
+	}
+}
+
+
+# rewrite 规则
+> 实现url重写以重定向
+
+1. URL 访问跳转，支持开发设计
+- 页面跳转、兼容性支持、展示效果等
+
+2. SEO 优化
+
+3. 维护
+-后台维护、流量转发等
+
+4. 安全-伪静态
+
+## rewrite regex replacement [flag];
+- Context: server, location ,if
+
+- 所有的请求重定向到maintain.html页面
+`rewrite ^(.*)$ /pages/maintain.html break;`
+`rewrite ^(.*)$ => /msie/$1 break`
+
+- 终端测试命令pcretest (pcre-tools包))
+
+/(\d+)\.(\d+)\.(\d+)\.(\d+)/
+192.3.2.3
+
+### flag
+- last 停止rewrite 检测
+- break 停止rewrite 检测
+- redirect 返回302临时重定向，地址栏会显示跳转后的地址
+	+ 关闭服务之后，页面不能再访问。也就是访问页面必须要经过当前页面之后重定向到其他页面
+- permanent 返回301永久重定向，地址栏会显示跳转后de地址
+	+ 解释关闭了服务，页面可以直接重定向到新的页面。不影响访问效果。
+
+
+location ~ ^/break {
+	# break 匹配之后停止，所有返回403
+	rewrite ^/break /test/ break;
+}
+
+location ~ ^/last {
+	# last 配配之后再次请求/test/ 匹配就返回
+	rewrite ^/last /test/ last;
+}
+location /test/ {
+	default_type application/json;
+	return 200 '{"status":"succes"}'
+}
+
+
+- 先测试-last
+`# curl -vL domain/last 请求过程`
+- 结果：200
+
+- redirect
+`# curl -vL domain/last`
+- 结果：302，再次请求Location 返回200
+
+`if ($http_user_agent ~* Chrome) {
+	rewrite ^/nginx http://domain.com/class/ redirect;
+}`
+
+`# 没有 $request_file 文件是跳转到baidu.com
+if (!-f $request_filename) {
+	rewrite ^/(.*)$ http://www.baidu.com/$1 redirect;
+}`
+
+## Rewrite规则优先级
+- server块rewrite指令
+- location匹配
+- 选定的location匹配
+
+`if($http_host = nginx.org) {
+	rewrite (.*) http://doamin.com$1;
+}`
+
+rewrite ^ http://domain.com$request_uri?;
+
+
+
+
+# Nginx 常见问题
+
+## server_name 多额虚拟主机优先级访问
+- 按读取顺序，先读先解析
+
+server {
+	server_name domain.com;
+}
+server {
+	server_name domain.com;
+}
+
+## 用什么方法传递用户的真实IP
+- 代理服务器设置：set x_real_ip=$remote_addr
+
+## 431 Request Entity Too Large
+- 用户上传文件限制：
+`client_max_body_size`
+
+## 502 bad gateway
+> 后端服务无响应
+
+## 504 Gateway Time-out
+- 后端服务执行超时
+
+
+# Nginx 性能优化
+- 当前系统结构瓶颈
+	+ 观察指标、压力测试
+- 了解业务模式
+	+ 接口业务类型、系统层次化结构
+- 性能与安全
+
+
+
+- 压测工具
+- 系统与Nginx性能优化
+
+
+
+## 常见恶意行为
+- 爬虫行为和恶意抓取、资源盗用
+- 基础防盗链功能-目的不让恶意用户轻易的爬去网站对外数据
+- secure_link_module- 对数据安全性提高加密验证和时效性，适合如核心重要数据
+- access_module-对后台、部分用户服务的数据提供IP防空
+
+
+
+
+## 常见的应用层攻击手段
+- 密码撞库（密码字典）
+	+ 复杂度
+	+ 定期更换
+	+ access_module: 对后台提供IP防控
+	+ 预警机制
+
+- 文件上传漏洞（个人中心-url去访问代码）
+	+ domain/upload/1.jpg/1.php
+	+ 1.jpg作为php代码执行
+
+`location ^~ /upoad {
+	if($request_filename ~* (.*)\.php) {
+		return 403;
+	}
+}`
+
+- SQL 注入场景
+	+ 用户(htp) -> Nginx+Lua(FastCGI) -> PHP(SQL) -> MariadB
+`# yum -y install php php-fpm php-mysql mariadb mariadb-server`
+create table users(id int(11),username varchar(64),password varchar(64),email varchar（64));
+insert into users(id,username,password,email) values(1,'json',md5('123'), 'jeson@imoc.com');
+
+user: ' or 1=1#
+
+
+
+
+
+## Nginx 防攻击策略
+## Nginx + Lua 的安全waf 防火墙
+
+
+
+
+
+
+# Lua
+> 简介、轻量、可扩展的脚本语言
+
+## Nginx + Lua 优势
+> 结合Nginx的并发处理epoll优势和Lua的轻量实现简单的功能且高并发的场景
+
+
+
+## Lua 基本语法
+- 变量
+a = 'alo\n123"'
+a = "alo\n123\""
+a = '\97lo\10\04923'
+a = [[alo
+123"]]
+
+- 布尔类型只有nil和false是 false，数字0, '' 空字符串('\0')都是rue
+- Lua 全部变量
+
+- while
+sum = 0
+num = 1
+while num <= 100 do
+	sum = sum + num
+end
+
+- for
+sum = 0
+for i = 1, 100 do
+	sum = sum + i
+end
+
+- 不支持++,--
+
+
+- if
+if age == 40 and sex =='Male' then
+	print("")
+elseif age > 60 and sex ~= "Female" then
+	print("")
+else
+	local age = io.read()
+	print("")
+end
+
+- ~= 不等于
+- .. 字符串拼接操作符
+- io库的分别从stdin和stdout读写的read和write函数
+
+## Nginx 与 Lua 环境
+1. LuaJIT 解释器
+2. ngx_devel_kit和lua-nginx-module
+3. 重新编译nginx
+
+www.imooc.com/article/19597
+
+
+
+
+
+
+## Nignx 结合Lua实现代码的灰度发布
