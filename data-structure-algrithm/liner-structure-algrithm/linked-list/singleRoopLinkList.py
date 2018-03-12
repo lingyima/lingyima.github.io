@@ -158,10 +158,12 @@ class SingleRoopLinkList(object):
         """
         查找节点是否存在
         """
+        if self.is_empty():
+            return False
 
         current = self.__head
 
-        # 第二个节点元素到最后第二个节点元素比较
+        # 第一个节点元素到最后第二个节点元素比较
         while current.next != self.__head:
             if current.item == item:
                 return True
