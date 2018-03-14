@@ -1514,6 +1514,235 @@ rewrite ^ http://domain.com$request_uri?;
 
 
 
+# 负载均衡
+
+## 负载均衡分类
+- GSLB(全局负载)：调度中心节点/应用服务中心节点，调度节点/应用服务
+- SLB：调度节点/服务节点
+
+## 分你为四层负载均衡和七层负载均衡
+- Layer 4 -> 服务端
+- Layer 7(代理，Nginx) -> 服务端
+
+## Nginx 负载均衡
+- proxy_pass
+- upstream server
+
+## upstream
+- Syntax: upstream name {...}
+- context: http
+
+## 配置负载均衡
+- server1.conf 8001
+- server2.conf 8002
+- server3.conf 8003 
+
+- upstream
+upstream bakcend {
+	# weight 值越大权重越大,有7个请求，5个请求分发到这个服务器
+	server domain.com weight=5;
+	server ip:port;
+	server unix:/tmp/backend3;
+
+	server backup1.domain.com:port backup;
+	server backup2.domain.com:port backup;
+}
+
+- down: 暂不参与复杂均衡
+- backup: 预留的备份服务器
+- max_fails: 允许请求失败的次数
+- fail_timeout: 经过max_fails失败后，服务暂停de时间
+- max_conns: 限制最大的接受的连接数
+
+`iptable -I input -t tcp --dport 8002 -j `
+
+## 调度算法
+- 轮询：按时间顺序注意分配到不同的后端服务器
+- 加权轮询：weight值越大，分配到的访问几率越高
+- least_conn: 最少连接数，那个机器连接数少就分发
+	+ 检测后端服务的连接数，那个连接最少就分发给那个服务器
+- ip_hash: 访问IP的hash结果分配，同一个IP的固定反问一个后端服务器
+	+ 解决：session 不同步问题
+	+ 问题：proxy 代理访问时，无法对真实的IP时做对应请求查询
+- url_hash: url的hash结果来分配请求，是每个URL定向到同一个后端服务器
+- hash 关键数值：hash 自定义的key(1.7.2版本)
+	+ hash key [consistent]
+	- context: upstream
+
+# 缓存服务
+
+## 缓存类型
+- 客户端(客户端缓存)
+- Nginx(代理缓存)
+- 服务端(Memcache/Redis)
+
+## proxy_cache 配置语法
+- proxy_cache_path path ...
+- context: http
+
+- `proxy_cache zone | off`
+- Default: off
+- Context: http, server, location
+
+## 缓存过期周期
+- proxy_cache_valid [code ...] time;
+- Default: -
+- Context: http, server, location
+
+## 缓存纬度
+- proxy_cache_key string;
+- default: proxy_cache key $scheme$proxy_host$request_uri;
+- context: htpt,server,location
+
+
+## 配置缓存
+- vip server: cache_test.conf
+upstream domain {
+	...
+}
+# 1:2 二层分集, 空间：10m(1m=8000 key), 最大空间 max_size, 60分钟内不访问某个页面清理， 用户临时目录关闭（不关闭容易冲突导致性能降低）
+proxy_cache_path /opt/app/cache levels=1:2 keys_zone=domain_cache:10m max_size=10g inactive=60m use_temp_path=off;
+
+location / {
+	proxy_cache domain_cache;
+	proxy_pass http://domain;
+	
+	# 200和304返回的12小时过期
+	proxy_cache_valid 200 304 12h;
+
+	# 其他的10分钟过期
+	proxy_cache_valid any 10m;
+	
+	# 缓存键
+	proxy_cache_key $host$uri$is_args$args;
+	
+	# 增加头信息
+	add_header Nginx-Cache "$upstream_cache_status";
+
+	# 后端某个服务器错误时，跳过访问下一台服务器
+	proxy_next_upstream error timeout invalid_header http_500 http_502 http_503 http_504;
+	include proxy_params;
+}
+
+## 清理指定缓存
+- rm -rf 缓存目录
+- 第三方扩展模块 ngx_cache_purge
+
+## 部分页面不缓存
+- proxy_no_cache string ...;
+- context: http,server,location
+
+if ($request_uri ~ ^/(url3|login|register|password\/reset)) {
+	set $cookie_nocache 1;
+}
+location / {
+	proxy_cache domain_cache;
+	proxy_pass http://domain;
+	....
+	proxy_no_cache $cookie_nocache $arg_nocache $arg_comment;
+	proxy_no_cache $http_pragma $http_authorization;
+}
+
+
+## 大文件分片请求
+- slice size;
+- slice 0;
+- context: http,server,location
+
+http_slice_module 模块
+- 优势：每个子请求收到的数据都会形成一个独立文件，一个请求断了，其他请求不受影响
+- 缺点：当文件很大或者 slice 很小的时候，可能会导致文件描述符耗尽等情况
+
+
+
+# secure_link_module模块
+- 制定并允许检查请求的链接的真实性以及保护资源免遭未经授权的访问
+- 限制链接生效周期
+
+- Syntax: secure_link expression;
+- context: http,server,location
+
+- Syntax: secure_link_md5 expression;
+- Context: http, server, location
+
+1. 单击下载
+2. 生成下载地址：/download?md5=2lk3j2o3ijaj&expires=21429039
+3. 请求下载地址
+4. 下载资源
+
+- 加密验证：2lk3j2o3ijaj
+- 过期校验：21429039
+
+# nginx -V
+`--with-http_secure_link_module`
+
+location / {
+	secure_link $arg_md5, $arg_expires;
+	
+	# 加密：$secure_link_expires$uri lingyima
+	secure_link_md5 "$secure_link_expires$uri lingyima";
+	if ($secure_link = "") {
+		return 403;
+	}
+	if ($secure_link = "0") {
+		return 410;
+	}
+
+}
+
+
+- md5url.sh
+#!/bin/sh
+servername="lingima.com"
+donwload_file="/donwload/file.img"
+time_num=$(date -d "2018-10-18 00:00:00" +%s)
+secret_num="lingyima"
+res=$(echo -n "${time_num}${download_file} ${secret_num}"|openssl md5 -binary | openssl base64 | tr +/ -_ | tr -d =)
+echo "http://${servername}${download_file}?md5=${res}&expires=${time_num}"
+
+
+
+# geoip_module 模块
+> 基于IP地址匹配MaxMind GeoIP 二进制文件，IP所在地域信息
+
+1. 区别国内外作 HTTP 访问规则
+2. 区别国内城市地域作 HTTP 访问规则
+
+
+## 安装模块
+`yum install nginx-module-geopi`
+`cd /etc/nginx/moduules/`
+
+## 配置 - nginx.conf
+`load_module "modules/ngx_http_geoip_module.so"
+load_module "modules/ngx_stream_geoip_module.so"`
+
+- donwload_geoip.sh
+`#!/bin/sh
+wget http://geolite.maxmind.com/download/geoip/database/GeoLite2-City.mmdb.gz
+wget http://geolite.maxmind.com/download/geoip/database/GeoLite2-Country.mmdb.gz`
+
+`gunzip *.mmdb.gz`
+
+
+- test_geo.conf
+geoip_country /etc/nginx/geoip/GeoLite2-City.mmdb;
+geoip_city /etc/nginx/geoip/GeoLite2-Country.mmdb;
+
+
+
+location / {
+	if ($geoip_country_code != CN) {
+		return 403;
+	}
+}
+location /myip {
+	default_type text/plain;
+	return 200 "$remote_addr $geoip_country_name $geoip_country_code $geoip_city";
+}
+
+
+
 
 # Nginx 常见问题
 
