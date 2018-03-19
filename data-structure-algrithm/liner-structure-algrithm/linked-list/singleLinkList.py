@@ -108,24 +108,25 @@ class SingleLinkList(object):
     def remove(self, item):
         """
         删除节点
-        :param item:
-        :return:
         """
-        current = self.__head
-        previous = None
-        if current.item == item:
+
+        if self.is_empty():
+            return False
+
+        if self.__head.item == item:
             self.__head == self.__head.next
-        else:
-            while current:
-                if current.item == item:
-                    previous.next = current.next
-                    break
-                else:
-                    previous = current
-                    current = current.next
+            return
 
+        current = self.__head.next
+        previous = self.__head
 
-
+        while current:
+            if current.item == item:
+                previous.next = current.next
+                break
+            else:
+                previous = current
+                current = current.next
 
     def search(self, item):
         """
@@ -133,6 +134,9 @@ class SingleLinkList(object):
         :param item:
         :return:
         """
+        if self.is_empty():
+            return False
+
         current = self.__head
         while current:
             if current.item == item:

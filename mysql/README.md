@@ -719,6 +719,16 @@ partition by list (login_type) (
 - insert into 插入login_type 10 出现错误代码：1526
 
 
+
+
+
+
+
+
+
+
+
+
 ## MySQL性能问题
 
 ### 超高的QPS/TPS
@@ -877,8 +887,69 @@ on a.comment_id = t.comment_id;
 
 
 ## 删除重复数据
-- 同一订单同一商品的重复评论
 
+### 同一订单同一商品的重复评论
+1. 查看是否存在对于订单同一商品的重复评论
+2. 备份 product_comment 表
+3. 删除同一订单的重复评论
+
+
+1. 查看是否存在对于订单同一商品的重复评论
+`select order_id, product_id, count(*)
+from product_comment
+group by order_id, product_id having count(*)>1`
+
+`select * 
+from product_comment
+where order_id=4 and product_id=134509`
+
+2. 备份 product_comment 表
+`create table bak_product_comment_180312
+like
+product_comment
+insert into back_product_comment_180312
+select * from product_comment;`
+- 或 mysqldump
+
+3. 删除同一订单的重复评论
+`delete a
+from product_comment a
+join (
+	select order_id, product_id, min(comment_id) as comment_id
+	from product_comment
+	group by order_id, product_id
+	having count(*)>=2
+) b on a.order_id=b.order_id and a.product_id=b.product_id
+and a.comment_id > b.comment_id`
+
+
+## 分区间统计
+> 统计消费总金额大于1000元的，800到1000元的，500到800元的，以及500元以下的人数
+
+select count(case when ifnull(total_money, 0) >=1000 then a.customer_id end) as '大于1000',count(case when ifnull(total_money,0) >=800 and ifnull(total_money,0)<100 then a.customer_id end) as '800-1000'
+,count(case when ifnull(total_money,0) >=500 and ifnull(total_money,0) < 800
+then a.customer_id end) as '500-800'
+,count(case when ifnull(total_money, 0)<500 then a.customer_id end) '小于500'
+from mc_userdb.customer_login a
+left join
+(select customer_id, sum(order_money) as total_money
+from mc_orderdb.order_master group by customer_id) b
+on a.customer_id = b.customer_id;
+
+## 捕获有问题的 SQL
+
+### 慢查询日志
+- set global show_query_log_file = /sql_log/slow_log.log
+- set global log_queries_not_using_indees = on; 未使用索引SQL抓取
+- set global long_query_time =0.001; 抓取执行超过多少时间的SQL（秒）
+- set global low_query_log = on; 启动慢查询
+
+### 慢查询日志记录的内容
+- Id: 线程ID
+- Query_time Lock_time Rows_send(查询结果返回行数) Rows_examined: 10000(扫描行数)
+
+### 如何分析慢查日志
+`mysqldumpslow slow-mysql.log`
 
 
 
