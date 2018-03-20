@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="MongoConfiguration">
+    <option name="serverConfigurations">
+      <list>
+        <ServerConfiguration>
+          <option name="authenticationDatabase" value="test" />
+          <option name="authenticationMechanism" value="SCRAM-SHA-1" />
+          <option name="connectOnIdeStartup" value="true" />
+          <option name="label" value="118.190.208.161" />
+          <option name="password" value="test*8cg" />
+          <option name="serverUrls">
+            <list>
+              <option value="118.190.208.161:19981" />
+            </list>
+          </option>
+          <option name="sshTunnelingConfiguration">
+            <SshTunnelingConfiguration />
+          </option>
+          <option name="username" value="test" />
+        </ServerConfiguration>
+      </list>
+    </option>
+  </component>
+</project>
