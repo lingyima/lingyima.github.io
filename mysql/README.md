@@ -770,10 +770,138 @@ partition by list (login_type) (
 	+ 分离业务网络和服务器网络
 
 
-### 大表带来的问题
+### 大表带来的性能问题
+- 记录行数巨大，单表超过千万行
+- 表数据文件巨大，表数据文件查过10G
+
+- 大表对查询的影响
+	+ 慢查询：很难在一定的时间内过滤出所需要的数据
+	+ buy_logs 订单日志
+	+ 查询京东订单：
+		* 显示订单
+		* 来源少
+		* 区分度低
+		* 大量磁盘IO
+		* 降低磁盘效率
+		* 大量慢查询
+
+- 大表对DDL操作的影响
+	+ 建立索引需要很长的时间：风险
+		* MySQL < 5.5 建立索引会锁表
+		* MySQL >= 5.5 不会锁表，但会引起主从延迟
+		* MySQL 5.6 多线程复制
+	+ 修改表结构需要长时间锁表
+		* 会造成时间的主从延迟
+		* 影响正常数据操作，阻塞业务数据操作
+
+- 处理数据库中的大表
+	+ 分库分表版一张大表分成多个小表
+	+ 难点：
+		* 分表主键的选择
+		* 分表后跨分区数据的查询和统计
+	+ 大表的历史数据归档**减少对前后端业务的影响**
+	+ 难点：
+		* 归档时间点的选择： 一年前(订单)，一个月(日志)
+		* 如何进行归档操作
+
+### 大事务带来的性能问题
+> 事务是数据库系统区别于其他一切文件系统的重要特性之一
+> 事务是一组具有原子性的SQL语句，或是一个独立的工作单元
+
+- 事务特性
+	+ 原子性
+	+ 一致性
+	+ 隔离性
+	+ 持久性
+
+#### 事务的原子性(ATOMICITY)
+> 一个事务必须被视为一个不可分割的最小工作单元这个歌事务中的所有操作要么全部提交成功，要么全部失败，对于一个事务来说，不可能只执行其中的一部分操作
+
+- 举例银行转账问题：A转账给B，2000元
+	+ A账户是否有2000元
+	+ 如果有大于2000元余额，A账户余额减去2000元
+	+ B账户余额增加2000元
+- 整个事务中的所有操作要么全部提交成功，要么全部失败回滚
+
+#### 事务的一致性(consistency)
+> 将数据库从一种一致性状态转换到另外一种一致性状态，在事务开始之前和事务结束后数据库中数据的完整性没有被破坏
+
+- 银行总金额不能变化
+
+#### 事务的隔离性(isolation)
+> 事务对数据库中的数据修改，在未提交完成前对于其他事物是不可见的
+
+- 转账时，有其他业务余额操作对于转账来说是不可见的，也就是说转账是隔离与其他业务
+
+- SQL标准定义的四种隔离级别（隔离性由低到高，并发性由高到低）
+	+ 未提交的读(Read uncommited) dirty data，脏数据
+		* 事务开始到结果之前的操作，对于其他事务来说可见
+	+ 已提交读(Read commited)
+		* 事务开始到结果之前，对于其他事务来说不可见的
+		* 不可重复读
+	+ 可重复读(repeatable read)
+		* 同一个事务中，多次读写同样的记录，结果是一致的
+
+	+ 可串行化(Serializable)
+		* 读取额每一行都加锁，导致大量锁超时，锁征用问题
+		* 没有并发的情况下，使用此严格机制
+
+##### 已提交读 与 可重复读区别
+- 进程1
+> select * from t; id={1,3,5,7,9}
+> show variables like '%iso%'
+> begin;
+> select * from t　where id < 7;
+id={1,3,5}
+
+- 进程2
+> begin;
+> insert into t values(2)
+> commit;
+
+- 进程1
+> select * from t where id <7
+id={1,3,5} 看不到插入的2
+> commit;
+> set session tx_isolation='read-committed'; - 设置隔离界别
+> show variables like '%iso%'
+> select * from t where id < 7
+id={1,3,5,2}
 
 
-### 大事务带来的问题
+- 进程2
+> begin;
+> insert into t values(4)
+> commit;
+
+
+- 进程1
+> select * from t where id <7
+id={1,3,5,2,4} 看到插入的 4
+
+
+
+#### 事务的持久性(durability)
+> 事务提交，其所做的修改就会永久保存到数据库中
+此时及时系统崩溃，已经提交的修改数据也不会丢失
+
+
+### 什么事大事务
+> 运行时间比较长，操作数据比较多的事务
+
+- 风险
+	+ 锁定太多的数据，造成大量的阻塞和锁超时
+	+ 回滚时所需时间比较长
+	+ 执行时间长，容易造成主从延迟
+
+### 如何处理大事务
+- 避免一次处理太多的数据
+- 移除不必要的事务中的 select 操作
+- 
+
+
+
+
 
 
 
@@ -950,6 +1078,86 @@ on a.customer_id = b.customer_id;
 
 ### 如何分析慢查日志
 `mysqldumpslow slow-mysql.log`
+
+## 数据库备份
+- 数据库复制不能取代备份的作用
+
+### 数据库结果备份分类
+- 逻辑备份（mysqldump）
+	+ 逻辑备份的结果为SQL语句，适合于所有存储引擎
+- 物理备份
+	+ 对数据库的目录的空啊被，对于内存表只备份结果
+
+- 离线备份
+		+ 数据库锁定
+- 在线备份
+		+ 第三方工具： XtraBackup
+
+### 数据库备份
+- 全量备份：整个数据库的完整备份
+- 增量备份：上次备份的基础上，对于更改数据进行的备份
+		+ mysqldump 不支持增量备份
+
+
+### mysqldump 进行备份
+- 备份表：mysqldump [OPTIONS] database [tables] [tables]
+- 备份数据库：mysqldump [OPTIONS] --database [OPTIONS] db1 db2;
+- 备份整个数据库：mysqldump [OPTIONS] --all-database [OPTIONS];
+
+### 常用参数：
+-u， --user=name
+-p, --password=[=name]
+- 必须有用户权限才能备份：select,reload,lock tables,replication client, show view, process
+
+--single-transaction: 启动一个事务
+数据备份时一致性
+仅对innodb存储引擎有效
+备份期间要保证没有其他DDL语句执行
+innodb事务不能隔离DDL操作
+
+-l, --lock-tables 
+非事务性存储引擎（锁定一个数据库的所有表）
+备份时，其他数据库只能进行读操作
+备份时，某一数据库的数据一致的，但不能保证mysql所有数据库一致的，因此规范中所有数据库引擎使用 InnoDB 原因
+
+--single-transaction与--lock-tables 互斥，不能同时使用
+
+有innodb 和其他存储引擎时只能使用 --lock-tables
+
+-x, --lock-all-tables 
+整个数据库所有实例都进行枷锁，保证备份一致性
+备份过程中数据库只能变成只读的，而不能写数据
+
+--master-data=[1/2]
+时间恢复，新建新的slaver实例
+1: 备份是，change master语句也备份，默认值1
+2: change master 语句以注释形式备份
+
+-R, --routines 存储过程
+--triggers 触发器
+-E, --events 调度事件
+
+--hex-blob (binary类型十六进制格式备份)
+--tab=path 结构和数据分别存储
+
+-w, --where='过滤条件' 只能单表数据条件导出
+
+### mysqldump 实例
+`# mysql -uroot -p`
+
+`mysql> create user 'backup'@'localhost' identified by '123456'`
+
+`mysql> grant select,reload,lock tables, replication client, show view, event,process on *.* to 'backup'@'localhost';`
+
+`# cd /data/db_backup`
+
+`# mysqldump -ubackup -p --master-data=2 --single-transaction --routines --triggers --events dbname > dbname.sql`
+
+`# grep "CREATE TABLE" dbname.sql`
+
+`# mysqldump -ubackup -p --master-data=2 --single-transaction --routines --triggers --events dbname dbname tablename > tablename.sql`
+
+`# grep "CREATE TABLE" tablename.sql`
 
 
 
