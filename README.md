@@ -63,4 +63,14 @@
 
 ## [MySQL](./mysql/)
 
+## [Redis](./redis/)
+
 ## [MongoDB](./mongodb/)
+
+## [MongoDB](./mongodb/)
+
+## [Scrapy](./scrapy/)
+
+## [hacker](./hacker/)
+
+## [NodeJS](./nodejs/)

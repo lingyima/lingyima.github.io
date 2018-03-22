@@ -58,9 +58,6 @@ i386/i686字样，说明该系统为 32 位。
 
 #### 安装 VMware 虚拟机
 
-
-
-
 ### 开始安装 CentOS 6.9 操作系统
 1. 选择系统引导方式
 2. 检查安装光盘介质
@@ -137,7 +134,6 @@ IP/netmask/gateway/禁止 DHCP/DNS1/DNS2
 LC_ALL=zh_CN.utf8
 
 
-
 ### 更新系统，打补丁到最新
 1. 修改更新源
 `~]# cd /etc/yum.repos.d`
@@ -154,6 +150,7 @@ LC_ALL=zh_CN.utf8
 3. 安装额外工具包
 `~]# yum -y install tree telnet dos2unix sysstat lrzsz nc nmap `
 `~]# yum groupinstall "Development Tools"`
+
 ### 远程连接
 - 查看系统是否监听于 TCP 协议的 ssh 服务22端口:
 `~]# ss -tnl`

@@ -719,214 +719,6 @@ partition by list (login_type) (
 - insert into 插入login_type 10 出现错误代码：1526
 
 
-
-
-
-
-
-
-
-
-
-
-## MySQL性能问题
-
-### 超高的QPS/TPS
-> QPS：每秒中处理的查询量
-- 风险：效率底下的SQL
-
-- CPU 10ms 处理 1个SQL
-- 1s 处理 100个sql
-- QPS <= 100
-
-- 100ms 处理 1个sql
-- QPS <= 10
-
-
-### 大量的并发和超高的CPU使用
-- 风险
-- 大量的并发：数据库连接数被占满（MySQL：max_connection 默认100）
-- 超高的CPU使用率：CPU 资源耗尽而出现宕机
-
-- 并发量：同一时间数据库处理的业务适量
-- 连接数：同一时间连接数据库
-
-
-### 磁盘IO
-- 风险：
-	+ 磁盘IO性能突然下降（解决：使用更快的磁盘设备）
-		* 更好的raid卡
-		* SSD
-		* fashion IO
-	+ 其他大量消耗磁盘性能的计划任务（调整计划任务，做好磁盘维护）
-		* 备份
-
-### 网卡流量
-- 风险: 网卡IO被占满（1000Mb/8 = 100MB）
-- solution:
-	+ 减少从服务器的数量
-	+ 进行分级缓存
-	+ 避免使用 `select *` 进行查询
-	+ 分离业务网络和服务器网络
-
-
-### 大表带来的性能问题
-- 记录行数巨大，单表超过千万行
-- 表数据文件巨大，表数据文件查过10G
-
-- 大表对查询的影响
-	+ 慢查询：很难在一定的时间内过滤出所需要的数据
-	+ buy_logs 订单日志
-	+ 查询京东订单：
-		* 显示订单
-		* 来源少
-		* 区分度低
-		* 大量磁盘IO
-		* 降低磁盘效率
-		* 大量慢查询
-
-- 大表对DDL操作的影响
-	+ 建立索引需要很长的时间：风险
-		* MySQL < 5.5 建立索引会锁表
-		* MySQL >= 5.5 不会锁表，但会引起主从延迟
-		* MySQL 5.6 多线程复制
-	+ 修改表结构需要长时间锁表
-		* 会造成时间的主从延迟
-		* 影响正常数据操作，阻塞业务数据操作
-
-- 处理数据库中的大表
-	+ 分库分表版一张大表分成多个小表
-	+ 难点：
-		* 分表主键的选择
-		* 分表后跨分区数据的查询和统计
-	+ 大表的历史数据归档**减少对前后端业务的影响**
-	+ 难点：
-		* 归档时间点的选择： 一年前(订单)，一个月(日志)
-		* 如何进行归档操作
-
-### 大事务带来的性能问题
-> 事务是数据库系统区别于其他一切文件系统的重要特性之一
-> 事务是一组具有原子性的SQL语句，或是一个独立的工作单元
-
-- 事务特性
-	+ 原子性
-	+ 一致性
-	+ 隔离性
-	+ 持久性
-
-#### 事务的原子性(ATOMICITY)
-> 一个事务必须被视为一个不可分割的最小工作单元这个歌事务中的所有操作要么全部提交成功，要么全部失败，对于一个事务来说，不可能只执行其中的一部分操作
-
-- 举例银行转账问题：A转账给B，2000元
-	+ A账户是否有2000元
-	+ 如果有大于2000元余额，A账户余额减去2000元
-	+ B账户余额增加2000元
-- 整个事务中的所有操作要么全部提交成功，要么全部失败回滚
-
-#### 事务的一致性(consistency)
-> 将数据库从一种一致性状态转换到另外一种一致性状态，在事务开始之前和事务结束后数据库中数据的完整性没有被破坏
-
-- 银行总金额不能变化
-
-#### 事务的隔离性(isolation)
-> 事务对数据库中的数据修改，在未提交完成前对于其他事物是不可见的
-
-- 转账时，有其他业务余额操作对于转账来说是不可见的，也就是说转账是隔离与其他业务
-
-- SQL标准定义的四种隔离级别（隔离性由低到高，并发性由高到低）
-	+ 未提交的读(Read uncommited) dirty data，脏数据
-		* 事务开始到结果之前的操作，对于其他事务来说可见
-	+ 已提交读(Read commited)
-		* 事务开始到结果之前，对于其他事务来说不可见的
-		* 不可重复读
-	+ 可重复读(repeatable read)
-		* 同一个事务中，多次读写同样的记录，结果是一致的
-
-	+ 可串行化(Serializable)
-		* 读取额每一行都加锁，导致大量锁超时，锁征用问题
-		* 没有并发的情况下，使用此严格机制
-
-##### 已提交读 与 可重复读区别
-- 进程1
-> select * from t; id={1,3,5,7,9}
-> show variables like '%iso%'
-> begin;
-> select * from t　where id < 7;
-id={1,3,5}
-
-- 进程2
-> begin;
-> insert into t values(2)
-> commit;
-
-- 进程1
-> select * from t where id <7
-id={1,3,5} 看不到插入的2
-> commit;
-> set session tx_isolation='read-committed'; - 设置隔离界别
-> show variables like '%iso%'
-> select * from t where id < 7
-id={1,3,5,2}
-
-
-- 进程2
-> begin;
-> insert into t values(4)
-> commit;
-
-
-- 进程1
-> select * from t where id <7
-id={1,3,5,2,4} 看到插入的 4
-
-
-
-#### 事务的持久性(durability)
-> 事务提交，其所做的修改就会永久保存到数据库中
-此时及时系统崩溃，已经提交的修改数据也不会丢失
-
-
-### 什么事大事务
-> 运行时间比较长，操作数据比较多的事务
-
-- 风险
-	+ 锁定太多的数据，造成大量的阻塞和锁超时
-	+ 回滚时所需时间比较长
-	+ 执行时间长，容易造成主从延迟
-
-### 如何处理大事务
-- 避免一次处理太多的数据
-- 移除不必要的事务中的 select 操作
-- 
-
-
-
-
-
-
-
-
-
-
-
-
-- Web服务器横向发展
-- 数据库服务器
-	+ Master(1)/Slave(15)
-		* Master 故障，没有高可靠性
-- 数据库影响原因(CPU:64 core, Mem: 512GB)
-	+ QPS(Query Per Second) & TPS(transaction per second)代表每秒执行的事务数量
-	+ 并发请求/CPU idle
-	+ 磁盘IO
-
-
-
-
-
-
-- SQL 查询速度
-- 服务器硬件（CPU/内存/磁盘IO/网卡流量）
-
 ## 数据库解决方案
 
 ## 如何对评论进行分页展示
@@ -1158,6 +950,548 @@ innodb事务不能隔离DDL操作
 `# mysqldump -ubackup -p --master-data=2 --single-transaction --routines --triggers --events dbname dbname tablename > tablename.sql`
 
 `# grep "CREATE TABLE" tablename.sql`
+
+
+
+### 全量备份
+`# mysqldump -ubackup -p --master-data=2 --single-transaction --routines --triggers --events --all-databases > db.sql`
+
+`# grep 'Current Database' db.sql`
+
+`# mkdir -p /tmp/cg_orderdb && chown mysql:mysql /tmp/cg_orderdb`
+
+`# mysql -uroot -p`
+> grant file on *.* to 'backup'@'localhost';
+
+`# mysqldump -ubackup -p --master-data=2 --single-transaction --routines --triggers --events --tab="/tpm/cg_orderdb" cg_orderdb`
+- file.sql 结构
+- file.txt 数据
+
+
+### 脚本编写mysqldump备份
+
+
+### 恢复mysqldump 备份的数据库
+
+- 单线程
+`# mysql -u -p dbname < backup.sql`
+`# mysql> source /tmp/backup.sql`
+
+`# mysql -uroot -p -e "create database bak_orderdb"`
+`# mysql -uroot -p back_orderdb < cg_orderdb.sql`
+
+- 恢复数据库之后检测数据是否完整回复：select count...
+
+- 恢复删除的数据
+`insert into cg_orderdb.order_master (字段...) select a.* from bak_orderdb.order_master a left join cg_orderdb.order_master b on a.order_id=b.order_id where b.order_id is null`
+
+### 全备数据恢复
+`# mysql -uroot -p -e"create database bak_orderdb"`
+`# mysql -uroot -p bak_orderdb < cg_orderdb.sql`
+
+
+- 误删除生产数据
+`delete cg_orderdb.order_master limit 10`
+
+- 备份数据库恢复数据
+`insert into cg_orderdb.order_master(...)
+select a.* from bak_orderdb.order_master a 
+left join cg_orderdb.order_master b
+on a.order_id=b.order_id
+where b.order_id is null`
+
+### -tab 备份数据恢复
+`# mysql -u root -p
+mysql>use crn
+mysql>show tables;
+mysql>source /tmp/cg_orderdb/region_info.sql;
+mysql>load data infile '/tmp/cg_orderdb/region_info.txt' into table region_info;`
+
+
+### mysqldummp全备总结
+- 常用参数
+- 全库及部分库表备份
+- 利用备份文件进行数据恢复
+
+
+## 如何进行时间点的恢复
+- 进行某一时间点的数据恢复
+	+ 恢复到误操作的时间
+
+- 先觉条件：
+	+ 具有指定时间点钱的一个全备
+	+ 具有自上次全备后指定时间点的所有二进制日志
+
+
+### 模拟生产环境数据库操作
+`# mysqldump -ubackup -p --master-data=2 --single-transaction --routines --triggers --events mc_orderdb > mc_orderdb.sql`
+mysql> use mc_orderdb
+mysql> create table t(
+id int auto_increment not null,
+uid int,
+cnt decimal(8,2),
+primary key (id));
+
+mysql> insert into t(uid,cnt)
+select customer_id, sum(order_money) from order_master
+group by customer_id;
+
+`mysql> select count(*) from t`
+
+delete from t limit 100;
+`select count(*) from t`
+
+
+### 恢复步骤：
+`# mysql -uroot -p mc_orderdb < mc_orderdb.sql`
+`# more mc_orderdb.sql`
+`# cd /home/mysql/sql_log`
+
+- 查看二进制日志删除数据
+`# mysqlbinlog --base64-output=decode-rows -vv --start-position=84882 --database=mc_orderdb mysql-bin.000011 | grep -B3 DELETE | more`
+
+`# mysqlbinlog --start-position=84882 --stop-position=169348
+--database=mc_orderdb mysql-bin.000011 > mc_order_diff.sql`
+
+`# mysql -uroot -p mc_orderdb < mc_order_idff.sql`
+
+`# mysql -uroot -p
+mysql> use mc_orderdb
+mysql> select count(*) from t;`
+
+
+### 基于时间点的恢复总结
+- 具有指定时间点前的 mysqldump 的备份
+- 具有备份到指定时间点的 mysql 二进制日志
+
+### 实施二进制日志备份
+- mysql 5.6版本之后，可以实时备份binlog
+
+- 配置
+`# grant replication slave on *.* to 'repl'@'127.0.0.1' identified by '123456';`
+`# hls -hl /home/mysql/sql_log`
+`# mkdir -p binlog_backup`
+
+`# mysqlbinlog --raw --read-from-remote-server \
+--stop-never --host localhost --port 3306 \
+-urepl -p123456 mysql-bin.000010`
+
+`# cd binlog_back`
+`# ls -hl`
+
+
+- 刷新日志
+`mysql> flush logs;`
+`mysql> show binary logs;`
+
+`# ls -hl binlog_back`
+
+## xtrabackup
+> 开源的在线热备份工具
+> 用于在线备份innodb存储引擎的表
+
+- 备份的过程中，不会影响表的读写操作
+- 只会备份数据文件，而不会备份表的结构
+
+- innobackupex 是对 xtrabackup 的封装并提供 MyISAM 表的备份功能
+
+- innobackupex 是 Xtrabackup 的插件 支持 MyISAM 备份，但会锁表
+
+
+### 安装 xtrabackup
+[xtrabackup下载地址](https://www.percona.com/downloads/XtraBackup/LATEST/) percona-xtrabackup-VERSION.el6.x86_64.rpm
+
+- 安装支持库
+`# yum install -y perl-DBD-MySQL.x86_64 perl-DBI.x86 perl-Time-HiRes.x86_64 perl-IO-Socket-SSL.noarch perl-TermReadKey.x86_64`
+
+`# yum search libnuma`
+
+`# rpm -ivh percona-xtrabackup-VERSION.el6.x86_64.rpm`
+
+- 命令
+/usr/bin/innobackupex -> xtrabackup
+/usr/bin/xtrabackup
+
+### xtrabackup进行全备
+
+`# innobackupex --user=root -H 127.0.0.1 --password=pwd --parallel=2 /data/db_backup/`
+
+- parallel: 线程数
+--no-timestamp 不按时间戳目录
+
+
+### xtrabackup进行全备恢复
+
+`# innobackupex --apply-log /path/to/BACKUP-DIR`
+`# mv /path/to/BACKUP-DIR /home/mysql/data`
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## MySQL性能问题
+
+- Web服务器横向发展
+- 数据库服务器
+	+ Master(1)/Slave(15)
+		* Master 故障，没有高可靠性
+- 数据库影响原因(CPU:64 core, Mem: 512GB)
+	+ QPS(Query Per Second) & TPS(transaction per second)代表每秒执行的事务数量
+	+ 并发请求/CPU idle
+	+ 磁盘IO
+
+- SQL 查询速度
+- 服务器硬件（CPU/内存/磁盘IO/网卡流量）
+
+### 超高的QPS/TPS
+> QPS：每秒中处理的查询量
+- 风险：效率底下的SQL
+
+- CPU 10ms 处理 1个SQL
+- 1s 处理 100个sql
+- QPS <= 100
+
+- 100ms 处理 1个sql
+- QPS <= 10
+
+
+### 大量的并发和超高的CPU使用
+- 风险
+- 大量的并发：数据库连接数被占满（MySQL：max_connection 默认100）
+- 超高的CPU使用率：CPU 资源耗尽而出现宕机
+
+- 并发量：同一时间数据库处理的业务适量
+- 连接数：同一时间连接数据库
+
+
+### 磁盘IO
+- 风险：
+	+ 磁盘IO性能突然下降（解决：使用更快的磁盘设备）
+		* 更好的raid卡
+		* SSD
+		* fashion IO
+	+ 其他大量消耗磁盘性能的计划任务（调整计划任务，做好磁盘维护）
+		* 备份
+
+### 网卡流量
+- 风险: 网卡IO被占满（1000Mb/8 = 100MB）
+- solution:
+	+ 减少从服务器的数量
+	+ 进行分级缓存
+	+ 避免使用 `select *` 进行查询
+	+ 分离业务网络和服务器网络
+
+
+### 大表带来的性能问题
+- 记录行数巨大，单表超过千万行
+- 表数据文件巨大，表数据文件查过10G
+
+- 大表对查询的影响
+	+ 慢查询：很难在一定的时间内过滤出所需要的数据
+	+ buy_logs 订单日志
+	+ 查询京东订单：
+		* 显示订单
+		* 来源少
+		* 区分度低
+		* 大量磁盘IO
+		* 降低磁盘效率
+		* 大量慢查询
+
+- 大表对DDL操作的影响
+	+ 建立索引需要很长的时间：风险
+		* MySQL < 5.5 建立索引会锁表
+		* MySQL >= 5.5 不会锁表，但会引起主从延迟
+		* MySQL 5.6 多线程复制
+	+ 修改表结构需要长时间锁表
+		* 会造成时间的主从延迟
+		* 影响正常数据操作，阻塞业务数据操作
+
+- 处理数据库中的大表
+	+ 分库分表版一张大表分成多个小表
+	+ 难点：
+		* 分表主键的选择
+		* 分表后跨分区数据的查询和统计
+	+ 大表的历史数据归档**减少对前后端业务的影响**
+	+ 难点：
+		* 归档时间点的选择： 一年前(订单)，一个月(日志)
+		* 如何进行归档操作
+
+### 大事务带来的性能问题
+> 事务是数据库系统区别于其他一切文件系统的重要特性之一
+> 事务是一组具有原子性的SQL语句，或是一个独立的工作单元
+
+- 事务特性
+	+ 原子性
+	+ 一致性
+	+ 隔离性
+	+ 持久性
+
+#### 事务的原子性(ATOMICITY)
+> 一个事务必须被视为一个不可分割的最小工作单元这个歌事务中的所有操作要么全部提交成功，要么全部失败，对于一个事务来说，不可能只执行其中的一部分操作
+
+- 举例银行转账问题：A转账给B，2000元
+	+ A账户是否有2000元
+	+ 如果有大于2000元余额，A账户余额减去2000元
+	+ B账户余额增加2000元
+- 整个事务中的所有操作要么全部提交成功，要么全部失败回滚
+
+#### 事务的一致性(consistency)
+> 将数据库从一种一致性状态转换到另外一种一致性状态，在事务开始之前和事务结束后数据库中数据的完整性没有被破坏
+
+- 银行总金额不能变化
+
+#### 事务的隔离性(isolation)
+> 事务对数据库中的数据修改，在未提交完成前对于其他事物是不可见的
+
+- 转账时，有其他业务余额操作对于转账来说是不可见的，也就是说转账是隔离与其他业务
+
+- SQL标准定义的四种隔离级别（隔离性由低到高，并发性由高到低）
+	+ 未提交的读(Read uncommited) dirty data，脏数据
+		* 事务开始到结果之前的操作，对于其他事务来说可见
+	+ 已提交读(Read commited)
+		* 事务开始到结果之前，对于其他事务来说不可见的
+		* 不可重复读
+	+ 可重复读(repeatable read)
+		* 同一个事务中，多次读写同样的记录，结果是一致的
+
+	+ 可串行化(Serializable)
+		* 读取额每一行都加锁，导致大量锁超时，锁征用问题
+		* 没有并发的情况下，使用此严格机制
+
+##### 已提交读 与 可重复读区别
+- 进程1
+> select * from t; id={1,3,5,7,9}
+> show variables like '%iso%'
+> begin;
+> select * from t　where id < 7;
+id={1,3,5}
+
+- 进程2
+> begin;
+> insert into t values(2)
+> commit;
+
+- 进程1
+> select * from t where id <7
+id={1,3,5} 看不到插入的2
+> commit;
+> set session tx_isolation='read-committed'; - 设置隔离界别
+> show variables like '%iso%'
+> select * from t where id < 7
+id={1,3,5,2}
+
+
+- 进程2
+> begin;
+> insert into t values(4)
+> commit;
+
+
+- 进程1
+> select * from t where id <7
+id={1,3,5,2,4} 看到插入的 4
+
+
+
+#### 事务的持久性(durability)
+> 事务提交，其所做的修改就会永久保存到数据库中
+此时及时系统崩溃，已经提交的修改数据也不会丢失
+
+
+### 什么事大事务
+> 运行时间比较长，操作数据比较多的事务
+
+- 风险
+	+ 锁定太多的数据，造成大量的阻塞和锁超时
+	+ 回滚时所需时间比较长
+	+ 执行时间长，容易造成主从延迟
+
+### 如何处理大事务
+- 避免一次处理太多的数据
+- 移除不必要的事务中的 select 操作
+
+
+
+# MySQL 影响性能的因素
+- 服务器硬件(CPU/内存/磁盘IO)
+- 服务器操作系统
+	+ Windows XP: 并发TCP10个
+- 数据库存储引擎的选择
+	+ 插件式存储引擎 
+	+ MyISAM: 不支持事务，**表级锁**
+	+ InnoDB: 支持事务，**行级锁**
+- 数据库参数配置
+- 数据库结构设计和SQL语句
+	+ **慢查询**
+	+ SQL 语句的编写和优化
+
+
+## 影响性能元素之一：CPU资源和可用内存大小 
+- 计算密集型
+
+- 热数据大小大于可用内存大小时，磁盘I/O成为瓶颈
+
+- 网络I/O，大量数据被查询时，Memeche缓存失效时，产生大量网络传输堵塞，而影响服务器性能
+
+- 升级I/O子系统
+
+- 网络和I/O资源
+
+
+### 如何选择 CPU
+- 更多CPU？更块CPU？
+- 频率和数量
+
+- Inter Xeon E7-8890 v2
+主频：2.5GHz, 核心数量:18核36线程
+售价：44488元
+
+### CPU密集型的吗？
+- SQL语句处理速度 - 使用更快的CPU
+	+ MySQL 不支持多 CPU 对同一SQL并发处理
+	+ 多 CPU 对SQL语句处理没有效果
+
+### 系统的并发量(吞吐量)如何
+- 并发解决：CPU越多越好
+
+**衡量数据库处理能力的指标**
+- QPS: 同时处理SQL的数量
+
+- Web 类应用：核心数量比频率重要
+
+### MysQL 的版本
+- 老版本对多核CPU支持不好（5.0）
+- 5.6+ 对多喝CPU支持改善
+
+### 选择32位还是64位置的CPU
+- 64位使用32位的服务器的版本
+
+## 内存I/O效率
+- SSD
+- Fusion-IO
+
+- 数据 > 内存 -> 数据库
+
+### 常用的MySQL存储引擎
+- MyISAM
+	+ 索引通过内存缓存
+	+ 数据通过操作系统缓存
+- InnoDB
+	+ 索引/索引都通过内存缓存
+
+
+- 100G磁盘，256G内存时，不能再对内存增加来提高性能，多余的内存
+
+- CPU ——> [写入]缓存 -> 磁盘
+
+- 磁盘数据 读取 -> 内存(Cache) -> 读取 CPU
+
+
+- 写入数据现在内存写入:
+	+ CPU数据 -> 写入到内存 -> 写入到磁盘
+
+- 使用内存缓存，计数器达到一定数量之后一次写入到磁盘
+
+### 内存的选择
+- 内存的主频：频率越高速度越快
+- 主板支持的最大内存频率
+
+- 组成购买升级
+- 每个通道的内存：相同品牌、颗粒
+- 频率、电压、校验技术和型号
+- 单挑容量要进可能大
+
+- 根据数据库大小选择内存
+	+ 考虑数据增长速度、幅度
+
+## 磁盘的配置和选择
+
+### 机器磁盘
+- 使用最多
+- 价格低
+- 存储空间大
+- 读写较慢
+
+#### 传统机器硬盘读取数据的过程
+1. 移动磁头到磁盘表上的正确位置
+2. 等待磁盘旋转，使得所需的数据在磁头之下
+3. 等待磁盘旋转过去，所有所需的数据都在被磁头读出
+
+- 访问时间：1，2不所耗费的时间
+- 传输速度：3
+
+#### 如何选择传统机器硬盘
+1. 存储容量
+2. 传输速度（上面第3步骤）
+3. 访问时间（上面第1，2步骤）
+4. 主轴转速
+5. 物理尺寸
+
+
+#### 
+
+
+
+
+### raid增强传统及其硬盘的性能
+### 固态存储SSD和PCIe卡
+### 网络存储NAS和SAN
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
