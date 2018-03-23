@@ -1,5 +1,5 @@
 # 测试案例
-
+## [C语言](./c/)
 ## [Linux 运维架构](./linux-sre)
 - [计算机入门](./linux-sre/computerGetting-started/)
 
@@ -74,3 +74,5 @@
 ## [hacker](./hacker/)
 
 ## [NodeJS](./nodejs/)
+
+## [自动化测试](./selenium/)
