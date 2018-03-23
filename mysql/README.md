@@ -1121,9 +1121,423 @@ mysql> select count(*) from t;`
 
 
 ### xtrabackup进行全备恢复
-
 `# innobackupex --apply-log /path/to/BACKUP-DIR`
 `# mv /path/to/BACKUP-DIR /home/mysql/data`
+
+
+### 增量备份
+> 先全备，后增量备份
+
+
+`mysql> create table t2(uid int(11))`
+
+`# innobackupex --user=root --password=pwd \
+--incremental /home/db_backup/ \
+--incremental-basedir=/home/db_backup/back-dir`
+
+--incremental 全量备份目录
+--incremental-basedir: 上一次增量备份的目录
+
+
+### 增量备份恢复
+innobackupex --apply-log --redo-only 全备目录
+
+innobackupex --apply-log --redo-only 全备目录 \
+--incremental-dir=第一次增量目录
+
+innobackupex --apply-log 全备目录
+
+mv /path/to/backup-dir /home/mysql/data
+
+
+
+- 恢复第一次增量备份
+`# innobackupex --apply-log --redo-only /data/db_backup/全备目录名`
+`# innobackupex --apply-log --redo-only /data/db_backup`
+`# innobackupex --apply-log --redo-only /data/db_backup/全备目录名 
+--incremental-dir=/data/db_backup/第一次增量备份目录`
+`# innobackupex --apply-log /data/db_backup/全备目录`
+`# mv /data/db_backup/第一次增量备份目录 /home/mysql/`
+`# /etc/init.d/mysqld stop`
+`# cd /home/mysql && rm -rf data`
+`# mv 增量备份目录 data`
+`# chown -R mysql:mysql data`
+`# /etc/init.d/mysqld start`
+
+
+## 备份计划
+- 每天凌晨对数据库进行一次全备
+- 实时对二进制日志进行远程备份
+- crontab 定时任务
+
+## 单点问题
+- 无法满足增长的读写请求
+- 高峰时数据库连接数经常上限
+
+## 解决单点问题
+- 组建数据库集群
+- 同一集群中的数据库服务器需要具有相同的数据
+- 集群中的任一服务器宕机后，其他服务器可以读取宕机服务器
+
+## MySQL 主从复制架构
+> Maser -> Slave
+
+- 主库将变更写入到主库的 binlog 中
+	+ 一定要开启二进制日志（影响性能）
+	+ 增量备份需要二进制日志
+- 从库IO进程读取主库 binlog 内哦让那个存储到 Relay Log(中继) 日志中
+	+ 二进制日志点
+	+ GTID(MySQL>=5.7推荐使用)
+- 从库的SQL进程读取 Relay Log 日志中内存在从库中重放
+
+### 主从配置步骤
+- 配置主从数据库服务器参数
+
+- 在Master服务器上创建用于复制的数据库账号
+
+- 备份 Master 服务器上的数据并初始化 Slave 服务器数据
+
+- 启动复制链路
+
+
+### 配置主从数据库服务器参数
+- Master 服务器
+`log_bin = /data/mysql/sql_log/mysql-bin 数据和日志分开存放
+server_id = 100`
+
+
+- Slave 服务器
+`log_bin = /data/mysql/sql_log/mysql-bin 数据和日志分开存放
+server_id = 101
+relay_log = /data/mysql/sql_log/relay-bin
+read_only=on
+super_read_ony = on # v5.7
+skip_slave_start=on 
+master_info_repository=TABLE
+relay_log_info_repository=TABLE
+`
+
+### MASTER 服务器上建立复制账号
+- 用于IO进程连接 Master 服务器获取 binlog 日志
+- 需要 `replication slave` 权限
+
+`create user 'repl'@'ip' identified by 'passwd'
+grant replication slave on *.* to 'repl'@'ip';`
+
+### 初始化 Slave 数据
+- 建议主从数据库服务器采用相同的 MySQL 版本
+- 建议使用全备备份的方式初始化 slave 数据
+
+`# mysqldump --master-data=2 -uroot -p -A --single-transaction -R --triggers`
+
+
+### 启动基于日志点的复制链路
+change master to
+MASTER_HOST='mster_host_ip',
+MASTER_USER='repl',
+MASTER_PASSWORD='PassWord',
+MASTER_LOG_FILE='mysql_log_file_name',
+MASTER_LOG_POS=xxx;
+
+
+### 主从复制演示
+- 192.168.3.100 - 主
+- 192.168.3.101 - 从
+
+1. 主服务器配置
+log_bin = /data/mysql/sql_log/mysql-bin
+max_binlog_size = 1000M
+binlog_format = row
+expire_logs_days = 7
+sync_binlog = 1
+server-id=100
+
+2. 从服务器配置
+server-id=101
+relay_log=/data/mysql/sql_log/mysqld-relay-bin
+master_info_repository = TABLE
+relay_log_info_repository = TABLE
+read_only = on
+
+3. 主服务器
+`mysql> show variables like '%server_id%'`
+- 动态改变 server_id = 100
+`mysql> set global serer_id = 100;`
+
+4. 重启slave服务器
+`# /etc/init.d/myql restart`
+
+5. master
+- 5.7 版本镜像方式安装有uuid文件，要删除此文件
+- 数据目录下 auto.cnf 
+
+- 创建账号
+`create user 'dba_repl'@'192.168.3.%' identified by '123456'
+grant replication slave on *.* to 'dba_repl'@'192.168.3.%';`
+
+- 全备数据库
+`# cd /data/db_backup/
+# mysqldump -uroot -p --single-transaction --master-data --triggers --routines --all-databases > all.sql`
+
+`# scp all.sql root@192.168.3.101:/root`
+
+6. slave
+`# cd /root
+# ls -lh
+# more all.sql
+# mysql -uroot -p < all.sql`
+
+- 复制链路配置
+`# mysql -uroot -p`
+mysql> show databases;
+mysql> change master master_host='192.168.3.100',
+master_user='dba_repl',
+master_password='123456',
+master_log_file='mysql-bin.000017',
+maeter_log_pos=663;
+
+- all.sql备份文件中有 CHANGE MASTER TO MASTER_LOG_FILE..
+
+`mysql> start slave; 启动复制链路`
+
+`mysql> show slave status \G`
+Relay_Master_Log_File: mysql-bin.000017
+Slave_IO_Running: Yes
+Slave_SQL_Running: YES
+
+
+7. master
+`use mc_orderdb
+> desc t1;
+> insert into t1 values(1);
+> select * from t1`
+
+8. slave
+`use mc_orderdb
+> select * from t1`
+
+
+
+## 启动基于 GTID 的复制链路
+
+- GTID: 全局事务ID
+
+- master
+`gtid_mode = on
+enforce-gtid-consistency
+log-slave-updates = on` 5.6 必须加上 5.7 不用添加
+
+- slave
+`change master to 
+	host
+	user
+	password`
+	**`master_auto_position = 1`**
+
+
+### GTID 复制的限制
+- 无法使用 create table ... select 建立表
+- 无法在事务中使用 create temporary table 建立临时表
+- 无法使用关联更新同时更新事务表和非事务表
+
+
+### 引入复制后的数据库架构
+- 增加了一个数据库副本
+- 根本上没有解决数据库单点问题
+- 主服务器宕机，需要手动切换从服务器，业务中断不能忍受
+
+- 解决：虚拟IP(vip)
+一个未分配给真实主机的IP，对外提供服务器的主机除了有一个真实IP外还有一个虚拟IP
+
+### 引入 VIP 后的数据库架构
+- 设置虚拟IP方法
+	+ 脚本
+	+ MHA
+	+ MMMM
+
+## keepalived 高可用服务
+- 实现主从主从数据库的健康监控
+- 当主DB宕机时迁移VIP到主备
+- 该主从复制为主主赋值，但只有一个提供服务
+	+ 另一个只能只读状态
+
+
+### 主主赋值配置调整
+- 保证只有一个主提供服务
+- 另一个提供只读的服务
+
+master-master
+
+
+### Master 数据库配置修改
+auto_increment_increment = 2 
+auto_increment_offset = 1
+
+1,3,5,7,9...
+
+### 主备数据库配置
+auto_increment_increment = 2
+auto_increment_offset = 2
+2,4,6,8,10...
+
+
+### Keeyalived 简介
+> 给予 ARRP 网络协议
+
+- 两个主机虚拟成一个设备，也就是一个虚拟IP（VIP）
+- 拥有虚拟IP的设备位master设备
+- 其他设备不能有虚拟IP，都是backup状态的设备，收到master 状态通告之外，不执行任何对外服务，当主机失效时将接管原先的master 的虚拟IP以及对外提供各项服务
+
+- 安装(master-backup都安装)
+`# yum -y install keepalived -y`
+
+- 配置：`/etc/keepalived/keepalived.conf`
+
+vrrp_script check_run {
+	script "/etc/keepalived/check_mysql.sh"
+	interval 5
+}
+
+### keepalived 演示
+- 主主配置
+
+1. master 配置
+- master: my.cnf
+`auto_increment_increment = 2
+auto_increment_offset = 1`
+
+- 修改global
+`# mysql -uroot -p
+mysql> set global auto_increment_increment=2;
+mysql> set global auto_increment_offset=1;`
+- 推出
+`# mysql -uroot -p
+mysql> show variables like 'auto%'`
+
+
+2. backup 配置
+- my.cnf
+`auto_increment_increment = 2
+auto_increment_offset = 2`
+
+`# mysql -uroot -p
+mysql> set global auto_increment_increment=2;
+mysql> set global auto_increment_offset=2;`
+- 推出
+`# mysql -uroot -p
+mysql> show variables like 'auto%'`
+
+- 查看账号
+`mysql>user mysql
+mysql>select user.host from user;`
+`> show variables like '%read_only%'`
+`mysql> show master status \G`
+
+3. master
+mysql> change master to master host='192.168.3.101',
+master_user='dba_repl',
+master_password='123456',
+master_log_file = 'mysql-bin.000003',
+master_log_pos='xxxx'
+
+
+master_log_file = 'mysql-bin.000003',
+master_log_pos='xxxx'
+上面两个值查看 backup 的show master status
+
+`> start slave;`
+`> show slave status \G`
+
+
+4. keepalived 安装 
+- master
+`# yum -y install keepalived`
+
+- backup
+`# yum -y install keepalived`
+
+`# cd /etc/keepalived/
+# vim keepalived.conf`
+
+vrrp_script check_run {
+	script "/etc/keepalived/check_mysql.sh"
+	interval 5
+}
+virtual_ipaddress {
+	192.168.3.99/24
+}
+
+- 两个服务器都有： check_mysql.sh 有执行权限
+`# chmod a+x check_mysql.sh`
+
+#!/bin/bash
+MYSQL=which mysql
+MYSQL_HOST=127.0.0.1
+MYSQL_USER=root
+MYSQL_PWD=123456
+CHECK_TIME=3
+MYSQL_OK=1
+function check_mysql_helth() {
+	$MYSQL -h$MYSQL_HOST -u$MYSQL_USER -p${MYSQL_PWD} -e "select @@version;" >/dev/null 2>&1
+	if [ $? = 0 ]; then
+		MYSQL_OK = 1
+	else
+		MYSQL_OK = 0
+	fi
+	return $MYSQL_OK
+}
+while [ $CHECK_TIME -ne 0 ]
+do
+	let "CHECK_TIME -= 1"
+	check_mysql_helth
+
+	echo $MYSQL_OK
+if [ $MYSQL_OK = 1 ] ; then
+	CHECK_TIME = 0
+	exit 0
+fi
+if [ $MYSQL_OK -eq 0 ] && [ $CHECK_TIME -eq 0 ]
+	pkill keepalived
+exit 1
+fi
+
+
+5. 启动keepalived进程
+
+- master
+`# /etc/init.d/keepalived start	`
+
+- slave
+`# /etc/init.d/keepalived start	`
+
+
+- master
+`# ip addr show`
+
+6. 模拟master 宕机
+`# /etc/init.d/mysql stop`
+
+7. 查看 vip
+- master
+`# ip addr show`
+
+- backup
+`# ipaddr show`
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1436,21 +1850,346 @@ id={1,3,5,2,4} 看到插入的 4
 4. 主轴转速
 5. 物理尺寸
 
-
-#### 
-
-
-
-
 ### raid增强传统及其硬盘的性能
+> 磁盘冗余队列的简称
+ 把多个容量较小的磁盘组成一组容量更大的磁盘，并提供数据冗余来保证数据完整性的技术
+
+
+- ![RAID 0](./images/raid0.png)
+	+ 数量 2+
+	+ 数据分别在不同的磁盘存储
+	+ 成本低
+	+ 提高整个磁盘的性能和吞吐量
+	+ 没有冗余
+	+ 没有错误修复能力
+
+- ![RAID 1](./images/raid1.png) 磁盘镜像
+	+ 镜像文件存储
+	+ 可靠性
+	+ 可修复性
+	+ 容易能力
+
+- ![RAID 5](./images/raid5.png) 分布式奇偶校验磁盘这列
+
+- ![RAID 10](./images/raid10.png) 分片镜像
+
+
+#### RAID级别选择
+
+- 等级|特点|是否冗余|盘数|读|写
+- RAID0|便宜，快速，危险|N|N|块|块
+- RAID1|高速度，简单，安全|Y|2|块|慢
+- RAID5|安全，成本折中|Y|N+1|块|取决于最慢的盘
+- RAID10|贵，高速，安全|Y|N+1|块|块
+
 ### 固态存储SSD和PCIe卡
+
+#### 固态存储：闪存（Flash Memory）
+- 特点：
+	+ 比机械磁盘更好的**随机读写性能**
+	+ 比机械磁盘更好的**并发**
+	+ 比机械磁盘更好的**更容易损坏**
+
+#### SSD：固态硬盘特点
+- 使用SATA接口
+	+ 提花传统磁盘而不需要任何改变
+	+ SATA 3.0 => 6Gbps
+	+ SATA 2.0 => 3Gbps
+-　支持 RAID
+
+#### PCIe卡(PCI-E SSD)特点
+- 无法使用SATA接口，使用PCI接口）
+	+ 独特的驱动和配置
+- 价格比SSD贵
+- 性能比SSD更好
+
+
+#### 固态存储的使用场景
+- 适用于存在大量随机 I/O 的场景
+- 解决单线程负载的 I/O 瓶颈
+
 ### 网络存储NAS和SAN
+> 两种外部文件存储设备加载到服务器上的方法
+
+- SAN: Storage Area Network
+SAN设备通过光纤链接到服务器，设备通过块接口访问，服务器可以将其当作硬盘使用
+
+
+- NAS: Network-Attached Storage
+NAS设备使用网络连接，通过基于文件的协议和NFS 或 SMB来访问
+
+大量顺序读写
+不如本地RAID磁盘
+随机读写慢
+I/O 合并
+
+#### 网络存储使用的场景
+- 顺序I/O 适合MySQL
+- 数据库备份
+
+### 网络对性能的影响
+- 磁盘：延迟和吞吐量
+
+- 网络性能的限制：延迟/带宽
+
+- 带宽：
+	512k vs 10M
+
+- 数据库服务器 -> Web 服务器
+	+ 内网：1000M带宽
+	+ 2M数据
+	+ 50 Web服务器
+	+ 满载
+
+- 网络质量对性能的影响
+	
+### 建议
+- 采用高性能和高带宽的网络接口设备和交换机
+- 对多个网卡绑定，增强可用性和带宽
+- 尽可能进行网络隔离
+
+
+
+- 服务器硬件对性能影响
+	+ CPU
+		* 64 bit OS
+		* 并发：CPU数量
+		* CPU密集型：CPU频率
+	+ 内存
+		* 主板支持最高频率的内存
+		* 内存大小
+	+ I/O 子系统
+		* PCIe 卡(随机 I/O 系能)
+		* SSD (SATA接口)
+		* RAID10(数据库)
+		* 磁盘
+		* SAN
+
+# OS 对性能的影响
+## MySQL 适合的操作系统
+- Windows(注意与Linux文件系统的大小区分)
+- FreeBSD
+	+ 老版本支持不好
+	+ 新版本支持很好
+- Solaris
+- Linux
+	+ RedHat
+	+ CentOS
+- Ubuntu
+
+
+## CentOS 系统参数优化
+- 《Linux性能优化大师》
+
+### 内核相关参数: `/etc/sysctl.conf`
+
+对于一个TCP连接，Server与Client需要通过三次握手来建立网络连接.当三次握手成功后, 可以看到端口的状态由 LISTEN 转变为 ESTABLISHED, 接着这条链路上就可以开始传送数据了
+每一个处于监听(Listen)状态的端口, 都有自己的监听队列 
+
+- 收到请求但是没有完成 accept() 的连接总数上限
+
+
+- 每个 listen 端口队列长度
+`net.core.somaxconn=65535
+net.core.netdev_max_backlog=65535
+net.ipv4.tcp_max_syn_backlog=65535`
+
+
+`echo 1000 >/proc/sys/net/core/somaxconn`
+
+- 等待状态- TCP 连接回收
+`net.ipv4.tcp_fin_timeout = 10
+net.ipv4.tcp_tw_reuse = 1
+net.ipv4.tcP-tw_recycle = 1`
+
+- TCP 连接接受和发送缓冲区大小默认值和最大值
+`net.core.wmem_default = 87380
+net.core.wmem_max = 16777316
+net.core.rmem_default = 87380
+net.core.rmem_max = 16777216`
+
+- 失效连接TCP数量，加快资源回收效率
+`net.ipv4.tcp_keepalive_time = 120 keepalive时间间隔：秒
+net.ipv4.tcp_keepalive_intvl = 30 
+net.ipv4.tcp_keepalive_probes = 3`
+
+- 内存参数
+- 4G
+`kernel.shmmax = 429467295`
+- 定义单个共享内存段的最大值
+参数设置足够大，以便能在一个共享内存段下容纳整个的InnoDB缓冲池的大小
+
+- 过低，会存储共享多个内存段，导致系统性能下降
+
+- 64 OS：最大值为物理内存值-1byte
+- 建议值位大于物理内存的一半，一般取值大于InnoDB缓冲池的大小即可，可以取物理内存-1byte
+
+`vm.swappiness = 0`
+这个参数当内存不足时会对性能产生比较明显的影响
+
+
+- Linux 系统内存区
+`# free -m`
+OS 没有足够的内存时就会将一些虚拟内存写到磁盘的交换分区中这样就会发生内存交换
+
+- 交换分区带来风险
+	+ 降低 OS的性能
+	+ 容易造成内存溢出，崩溃，或者被 OS kill掉
+
+- 何时使用交换分区
+	+ `vm.swappiness=0` 告诉内核除非虚拟内存完全满了，否则不要使用交换区
+
+- 增加资源限制： `/etc/security/limit.conf`
+	+ 此文件实际上Linux PAM也就是插入式认证模块的配置文件
+	+ 打开文件数的限制
+	
+- 加到 limit.conf 文件末尾
+`* soft nofile 65525
+* hard nofile 65535`
+`*`: 对所有用户有效
+soft: 当前系统生效的设置（不能比hard高）
+hard: 系统中所能设定的最大值
+nofile: 所限制的资源是打开文件的最大数目
+65535： 限制的数量
+
+- 可打开的文件数量增加到65535个亿保证可以打开足够多的文件句柄
+- 重启系统才能生效
+
+
+- 磁盘调度策略（`/sys/block/devname/queue/scheduler`）
+`# cat /sys/block/sda/queue/scheduler`
+`# noop anticipatory deadline [cfq]`
+
+- cfq: 公平策略(桌面级别没有问题)
+cfq 需要插入不必要的请求，导致很差的响应时间
+- mysql服务器使用
+
+- **noop**: 电梯式调度策略
+实现了一个FIFO队列，向电梯的工作方法一样对I/O请求进行组织，当有一个新的请求到来时，他将请求合并到最近的请求之后，一次来保证请求统一介质。NOOP 倾向饿死读而利于写，因此NOOP对于**内存设备、RAM及嵌入式系统**是最好的选择
+
+
+- **deadline**(截至时间调度策略)
+确保了一个截止时间内服务请求，这个截至时间是的可调整的，而默认读期限短于写期限。这样就防止了写操作因为不能被读取而饿死的现象，Deadline对数据库类应用是最好的选择。
+
+- **anticipatory**(预料I/O调度策略)
+本质上与Deadline一样，但在最后一次读操作后，要等待6ms, 才能继续进行对其他I/O请求进行调度。他会在每个6ms中插入新的I/O操作，而会将一些小写入流合并成一个大写入流，用写入延时换取最大的写入吞吐量。AS适合于写入较多的环境，比如文件服务器，AS数据库环境表现很差。
+
+
+`echo deadline > /sys/block/sda/queue/scheduler`
+
+
+# 文件系统对性能的影响
+
+- Windows
+	+ FAT:
+	+ NTFS:服务器
+- Linux
+	+ ext3
+	+ ext4
+	+ xfs: 比ext系列 性能更高
+
+
+ext3/4 系统的挂载参数(/etc/fstab)
+data=writeblack | ordered | journal
+
+**writeback**: 元数据和数据不是同步（**innode最好的选择**）
+
+**ordered**: 只记录元数据
+但提供了一致性的保证，在写元数据之前会先写数据，使他们保持一致
+
+journal: 原子日志行为，将数据最终写入前，先记录到日志当中。对于INNoDB 不适合
+
+- noatime,nodiratime
+禁止记录文件的访问时间和读取目录的时间
+可以减少些的操作
+`/dev/sda1/ext4 noatime,nodiratime,data=writeback 1 1`
+
+
+
+# MySQL 体系结构
+![MySQL 体系结构](./images/mysql-structure.png)
+
+- 插件是存储引擎：数据存储、提取相分离
+
+1. 客户端(CS结构)
+- PHP/Java/C API/.Net/Python/ODBC/JDBC
+
+- select语句：如何从文件中获得所要查询的数据，这个具体的实现方式则是由下一层存储引擎层来实现
+
+![存储引擎层](./images/mysql-engine.png)
+
+- 存储引擎针对于表（一个库中的不同国标可以使用不同的存储引擎）
+
+## MyISAM
+MySQL 5.5- 默认的存储引擎
+
+- 系统表
+- 临时表：在排序、分组等操作中，当数量超过一定的大小之后，由查询优化器建立的临时表
+
+- MYD 数据文件
+- MYI 索引文件
+
+`engine=myisam default charset=utf8`
+
+- f.frm 记录表结构
+- f.MYD
+- f.MYI
+
+### 特性
+- 表级锁：修改时枷锁，读取是共享锁
+	+ 并发性：不太好
+- 表损坏修复：可能造成数据的丢失
+	+ 检查：`check table tablename`
+	+ 修复：`repaire table tablename`	
+
+`mysql> create table myisam(id int, varchar(10)) engine=myisam
+# ls -l mysam`
+
+`mysql> check table myisam`
+`mysql> repaire table myisam`
+
+- myisam 修复（需要停止mysql服务）
+`# myisamchk`
+
+- 支持的索引类型
+	+ 全文索引
+	+ text,blob支持索引
+- 支持数压缩
+	+ 适合只读表
+	+ 可以减少磁盘I/O
+	+ `myisampack` 压缩命令
+	+ `# myisampack -b -f myisam.MYI`
+	+ 插入操作：insert into myisam values(1,'ab')
+
+
+### MyISAM 限制
+- < MySQL 5.0 时默认表大小为4G
+- 存储大表则要修改 `MAX_Rows` 和 `AVG_ROW_LENGTH`
+- 大于 5.0 版本默认支持 256TB
+
+
+### MyISAM 使用场景
+- 非事务型应用
+- 只读类应用
+- 空间类应用
 
 
 
 
+# MySQL 基准测试-测量系统性能
+## 基准测试
+> 测量和评估软件性能指标的活动用于建立某个时刻的性能基准，以便当系统发生软硬件变化时重新进行基准测试以评估变化对性能的影响
 
 
+- 基准测试：（系统系能，忽略逻辑业务性能）
+	+ 直接、简单、易于比较，用于评估服务器的处理能力
+
+- 对系统设置的压力测试
+	+ 对真实的业务数据进行测试，获得真实系统所能承受的压力
+
+- 压力测试需要针对不同主题，所使用的数据和查询也是真实用到的
+
+- 基准测试不关心业务逻辑，所使用的查询和业务的真实性可以和业务环境没有关系
 
 
 
