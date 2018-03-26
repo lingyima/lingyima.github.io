@@ -3,6 +3,7 @@
 ## [Linux 运维架构](./linux-sre)
 - [计算机入门](./linux-sre/computerGetting-started/)
 
+## [PHP](./php/)
 ## [设计模式](./design-pattern)
 
 ## [数据结构与算法](./data-structure-algrithm/)
