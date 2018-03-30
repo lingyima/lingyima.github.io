@@ -2,6 +2,13 @@
 操作系统时有两个主要部分组成的：硬件和软件。硬件是计算机的物理设备。软件则是使得硬件能够正常工作的程序的集合。计算机软件分成两大类：操作系统和应用程序。应用程序使用计算机硬件来解决用户的问题。操作系统则控制用户对硬件访问。
 
 ## 操作系统发展史
+- 手工处理
+- 批处理
+	+ 联机批处理系统
+	+ 脱机批处理系统
+- 分时处理系统
+- 实时处理系统
+
 - Multi tasks(Bell, MIT, GE) => Multics
 - KenThompson: Space Travel
 - DEC: PDP-11, VAX(VMS系统)
@@ -71,18 +78,6 @@
 	+ Kernel + Application
 	+ 狭义上的OS: Kernel
 	+ GNU/Linux
-- OS的接口: 仅是应用程序
-	+ GUI: Graphic User Interface
-		* GNome: C, gtk图形库
-		* [KDE](https://www.kde.org/)：C++, QT图形库
-		* [xfce](https://xfce.org)
-	+ GLI: Command Line Interface
-		* bash
-		* zsh
-		* sh
-		* csh
-		* tcsh
-		* ksh
 - OS 的功能
 	+ 驱动程序
 	+ 进程管理
@@ -90,10 +85,6 @@
 	+ 网络协议栈
 	+ 内存管理
 	+ 文件系统
-
-- API：Application Program Interface 程序员面对的编程接口
-	+ POSIX: Portable Operating System
-- ABI：Application Binary Interface 程序应用者面对运行程序的接口
 - GNU:
 	+ 源码：编译为二进制格式
 	+ gcc, glibc, vi, linux
@@ -611,20 +602,3 @@ open(), read(), write(), close(), delete(), create()
 	+ Debian: deb(.dpkg), apt-get
 	+ ArchLinux: pacman
 	+ Gentoo: portage
-
-### Linux 接口
-- GUI：Graphic User Interface
-	+ GNome: C，gtk开发环境
-	+ KDE：C++，qt开发环境
-	+ Xfce：轻量级
-- CLI：Command Line Interface
-	+ bash, zsh, sh, csh, tcsh, ksh
-- TUI：Text User Interface
-`# nmtui`
-
-- API：Application Program Interface程序员面对的编程接口
-- ABI：Application Binary Interface程序应用者面对运行程序的接口
-- sPOSIX：Portable Operating System可移植操作系统
-
-- 自动运行服务（不占接口，开机自动运行）：后台
-- 手动运行服务（占接口）：前台

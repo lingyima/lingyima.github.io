@@ -5,10 +5,10 @@
 
 ### 下载 CentOS 6.9 操作系统
 #### 下载 CentOS 6.9 操作系统镜像站
-	+ [CentOS 官网](https://www.centos.org/)主页下有 **Older Versions** 标题下有[then click here>>](https://wiki.centos.org/Download) 选择版本跳转到选择[镜像站点列表页面](http://isoredirect.centos.org/centos/6/isos/x86_64/)，选择一个国内的镜像站点下载即可
-	+ [阿里巴巴镜像站](https://mirrors.aliyun.com) https://mirrors.aliyun.com/centos/6/isos/x86_64/CentOS-6.9-x86_64-minimal.iso
-	+ [网易镜像站](http://mirrors.163.com) http://mirrors.163.com/centos/6.9/isos/x86_64/CentOS-6.9-x86_64-minimal.iso
-	+ [搜狐镜像站](http://mirrors.sohu.com) http://mirrors.sohu.com/centos/6.9/isos/x86_64/CentOS-6.9-x86_64-minimal.iso
+- [CentOS 官网](https://www.centos.org/)主页下有 **Older Versions** 标题下有[then click here>>](https://wiki.centos.org/Download) 选择版本跳转到选择[镜像站点列表页面](http://isoredirect.centos.org/centos/6/isos/x86_64/)，选择一个国内的镜像站点下载即可
+- [阿里巴巴镜像站](https://mirrors.aliyun.com) https://mirrors.aliyun.com/centos/6/isos/x86_64/CentOS-6.9-x86_64-minimal.iso
+- [网易镜像站](http://mirrors.163.com) http://mirrors.163.com/centos/6.9/isos/x86_64/CentOS-6.9-x86_64-minimal.iso
+- [搜狐镜像站](http://mirrors.sohu.com) http://mirrors.sohu.com/centos/6.9/isos/x86_64/CentOS-6.9-x86_64-minimal.iso
 
 #### ISO 文件
 > 扩展名为".iso"格式的文件就是所谓的镜像文件。
@@ -50,7 +50,6 @@ i386/i686字样，说明该系统为 32 位。
 
 - 系统跟目录下是否 /lib64 库目录
 `~]# ls -d /lib64`
-
 
 
 
