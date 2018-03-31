@@ -555,18 +555,6 @@ Kali Linux预装了许多渗透测试软件，包括nmap(端口扫描器)、Wire
 
 - Android：Linux kernel + busybox + jvm(java) + android(GUI)
 
-### Linux 哲学思想
-1. 一切皆文件；
-把几乎所有的资源统统抽象为文件形式；包括硬件设备，甚至通信接口等；
-open(), read(), write(), close(), delete(), create()
-2. 由众多目的单一的小程序组成；一个程序只做一件事，且做好；
-组合目的单一的小程序完成复杂任务；
-3. 尽量避免跟用户交互；
-易于以编程的方式实现自动化任务；
-4. 使用文本文件保存配置信息；
-5. 提供机制，而非策略；
-
-### Linux 启动程序
 ### Linux 程序包管理器
 - Linux内核：
 	+ Kernel+Application
